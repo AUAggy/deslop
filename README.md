@@ -5,6 +5,7 @@
 <h1 align="center">DeSlop</h1>
 
 <p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=AUAggy.deslop"><img src="https://img.shields.io/visual-studio-marketplace/v/AUAggy.deslop?label=VS%20Code&color=0078d4" alt="VS Code Marketplace"></a>
   <a href="https://open-vsx.org/extension/AUAggy/deslop"><img src="https://img.shields.io/open-vsx/v/AUAggy/deslop?label=Open%20VSX&color=c160ef" alt="Open VSX"></a>
   <a href="https://github.com/AUAggy/deslop/releases"><img src="https://img.shields.io/github/v/release/AUAggy/deslop?label=Release&color=e53e3e" alt="GitHub Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/AUAggy/deslop?color=555" alt="MIT License"></a>
@@ -87,12 +88,11 @@ The extension asks for a key on first use and stores it in your OS keychain via 
 
 ## Getting started
 
-**VSCodium:** Search "DeSlop" in the Extensions panel (pulls from Open VSX Registry).
+**VS Code:** Search "DeSlop" in the Extensions panel, or install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=AUAggy.deslop).
 
-**VS Code:** The extension is not yet listed on the VS Code Marketplace. Install manually:
-1. Download `deslop-0.1.0.vsix` from the [latest GitHub release](https://github.com/AUAggy/deslop/releases)
-2. Open VS Code, press `Cmd+Shift+P` / `Ctrl+Shift+P`
-3. Run `Extensions: Install from VSIX`, select the downloaded file
+**VSCodium:** Search "DeSlop" in the Extensions panel (pulls from Open VSX Registry), or install from [Open VSX](https://open-vsx.org/extension/AUAggy/deslop).
+
+**Manual install:** Download the `.vsix` from the [latest GitHub release](https://github.com/AUAggy/deslop/releases), then run `Extensions: Install from VSIX` from the command palette.
 
 Then:
 1. Run **DeSlop Selection** from the command palette
