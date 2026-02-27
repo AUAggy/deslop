@@ -34,7 +34,7 @@ export async function showDiffAndPrompt(
 
     choice = await vscode.window.showInformationMessage(
       'Accept the rewrite?',
-      { modal: false },
+      { modal: true },
       'Accept',
       'Discard'
     );
