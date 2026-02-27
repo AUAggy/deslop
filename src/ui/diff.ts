@@ -61,8 +61,8 @@ export async function showDiffAndPrompt(
  */
 function waitForStatusBarChoice(): Promise<'Accept' | 'Discard'> {
   return new Promise((resolve) => {
-    const acceptCmd = 'humanizer._acceptRewrite';
-    const discardCmd = 'humanizer._discardRewrite';
+    const acceptCmd = 'deslop._acceptRewrite';
+    const discardCmd = 'deslop._discardRewrite';
 
     const acceptItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
     acceptItem.text = '$(check) Accept rewrite';

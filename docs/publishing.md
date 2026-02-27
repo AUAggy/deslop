@@ -1,4 +1,4 @@
-# Publishing the Humanizer Extension
+# Publishing the DeSlop Extension
 
 ## Why Publish to Both Registries
 
@@ -18,7 +18,7 @@ Publishing to only one leaves a significant portion of users unable to install t
 
 1. Create a Microsoft account at https://account.microsoft.com if you don't have one.
 2. Go to https://marketplace.visualstudio.com/manage and sign in.
-3. Create a publisher — pick a publisher ID (e.g. `miaggy`). This becomes part of the extension's unique identifier: `miaggy.humanizer`.
+3. Create a publisher — pick a publisher ID (e.g. `miaggy`). This becomes part of the extension's unique identifier: `miaggy.deslop`.
 4. Create a Personal Access Token (PAT):
    - Go to https://dev.azure.com → User Settings → Personal Access Tokens
    - New token: name it `vsce`, set expiry, set **Marketplace → Manage** scope
@@ -95,7 +95,7 @@ npx vsce publish --packagePath humanizer-0.1.0.vsix
 ```
 
 The extension will be live within a few minutes. Check it at:
-`https://marketplace.visualstudio.com/items?itemName=miaggy.humanizer`
+`https://marketplace.visualstudio.com/items?itemName=miaggy.deslop`
 
 ### Step 3: Publish to Open VSX
 

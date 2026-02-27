@@ -1,7 +1,7 @@
 {
-  "name": "humanizer",
-  "displayName": "Humanizer — AI Slop Remover",
-  "description": "Rewrites AI-generated prose into clear technical writing. Removes slop vocabulary, padding phrases, decorative emojis, and cliché structures from READMEs, docstrings, commit messages, and blog posts.",
+  "name": "deslop",
+  "displayName": "DeSlop \u2014 AI Slop Remover",
+  "description": "Rewrites AI-generated prose into clear technical writing. Removes slop vocabulary, padding phrases, decorative emojis, and cliche structures from READMEs, docstrings, commit messages, and blog posts.",
   "version": "0.1.0",
   "publisher": "humanizer-dev",
   "repository": {
@@ -37,35 +37,35 @@
     "theme": "dark"
   },
   "activationEvents": [
-    "onCommand:humanizer.humanizeSelection"
+    "onCommand:deslop.humanizeSelection"
   ],
   "main": "./dist/extension",
   "contributes": {
     "commands": [
       {
-        "command": "humanizer.humanizeSelection",
-        "title": "Humanize Selection",
-        "category": "Humanizer"
+        "command": "deslop.humanizeSelection",
+        "title": "DeSlop Selection",
+        "category": "DeSlop"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "humanizer.humanizeSelection",
+          "command": "deslop.humanizeSelection",
           "when": "editorHasSelection",
           "group": "1_modification"
         }
       ]
     },
     "configuration": {
-      "title": "Humanizer",
+      "title": "DeSlop",
       "properties": {
-        "humanizer.model": {
+        "deslop.model": {
           "type": "string",
           "default": "x-ai/grok-4.1-fast",
           "description": "OpenRouter model to use for rewrites."
         },
-        "humanizer.defaultDocumentType": {
+        "deslop.defaultDocumentType": {
           "type": [
             "string",
             "null"
@@ -80,12 +80,12 @@
           "default": null,
           "description": "Pre-select document type; null means always prompt."
         },
-        "humanizer.showChangeLog": {
+        "deslop.showChangeLog": {
           "type": "boolean",
           "default": true,
           "description": "Show changelog panel after each accepted rewrite."
         },
-        "humanizer.autoAccept": {
+        "deslop.autoAccept": {
           "type": "boolean",
           "default": false,
           "description": "Skip diff view and replace text immediately."

@@ -15,15 +15,15 @@ export async function callHumanize(
   text: string,
   docType: DocumentType
 ): Promise<HumanizeResponse> {
-  const config = vscode.workspace.getConfiguration('humanizer');
+  const config = vscode.workspace.getConfiguration('deslop');
   const model = config.get<string>('model', 'x-ai/grok-4.1-fast');
 
   const client = new OpenAI({
     apiKey,
     baseURL: 'https://openrouter.ai/api/v1',
     defaultHeaders: {
-      'HTTP-Referer': 'https://github.com/humanizer-vscode',
-      'X-Title': 'VS Code Humanizer',
+      'HTTP-Referer': 'https://github.com/miaggy/deslop',
+      'X-Title': 'DeSlop',
     },
   });
 

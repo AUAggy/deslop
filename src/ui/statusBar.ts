@@ -10,7 +10,7 @@ export function showSpinner(context: vscode.ExtensionContext): void {
     );
     context.subscriptions.push(statusItem);
   }
-  statusItem.text = '$(loading~spin) Humanizing...';
+  statusItem.text = '$(loading~spin) DeSlopping...';
   statusItem.show();
 }
 

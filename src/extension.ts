@@ -6,7 +6,7 @@ export function activate(context: vscode.ExtensionContext): void {
   initChannel(context);
 
   const disposable = vscode.commands.registerCommand(
-    'humanizer.humanizeSelection',
+    'deslop.humanizeSelection',
     () => humanizeSelection(context)
   );
   context.subscriptions.push(disposable);

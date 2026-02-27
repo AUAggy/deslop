@@ -40,7 +40,7 @@ export async function humanizeSelection(
   const prose = await isProseSelection(editor.document, selection);
   if (!prose) {
     vscode.window.showErrorMessage(
-      'Humanizer rewrites prose, not code. Select a comment or documentation block.'
+      'DeSlop rewrites prose, not code. Select a comment or documentation block.'
     );
     return;
   }
@@ -60,7 +60,7 @@ export async function humanizeSelection(
   }
 
   // Document type
-  const config = vscode.workspace.getConfiguration('humanizer');
+  const config = vscode.workspace.getConfiguration('deslop');
   const defaultType = config.get<DocumentType | null>('defaultDocumentType', null);
   let docType: DocumentType | undefined;
 

@@ -5,7 +5,7 @@ let channel: vscode.OutputChannel | undefined;
 
 export function getChannel(): vscode.OutputChannel {
   if (!channel) {
-    channel = vscode.window.createOutputChannel('Humanizer: Changes');
+    channel = vscode.window.createOutputChannel('DeSlop: Changes');
   }
   return channel;
 }

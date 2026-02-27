@@ -15,7 +15,7 @@ export async function ensureApiKey(
   }
 
   const action = await vscode.window.showInformationMessage(
-    'Humanizer needs an OpenRouter API key. Enter it now or get one at openrouter.ai/keys.',
+    'DeSlop needs an OpenRouter API key. Enter it now or get one at openrouter.ai/keys.',
     'Enter Key',
     'Get Key'
   );
@@ -77,6 +77,6 @@ export async function promptAndSaveKey(
   }
 
   await setApiKey(secrets, key);
-  vscode.window.showInformationMessage('Key saved. Ready to humanize.');
+  vscode.window.showInformationMessage('Key saved. Ready to deslop.');
   return key;
 }
