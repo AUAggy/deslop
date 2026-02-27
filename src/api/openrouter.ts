@@ -6,6 +6,30 @@ import type { DocumentType, HumanizeResponse } from '../types';
 
 const MAX_CHARS = 4000 * 4; // ~4000 tokens at ~4 chars/token
 
+const PROVIDER_CONFIG = {
+  openrouter: {
+    baseURL: 'https://openrouter.ai/api/v1',
+    defaultModel: 'x-ai/grok-4.1-fast',
+    defaultHeaders: {
+      'HTTP-Referer': 'https://github.com/miaggy/deslop',
+      'X-Title': 'DeSlop',
+    },
+  },
+  venice: {
+    baseURL: 'https://api.venice.ai/api/v1',
+    defaultModel: 'llama-3.3-70b',
+    defaultHeaders: {},
+  },
+} as const;
+
+type Provider = keyof typeof PROVIDER_CONFIG;
+
+function getProviderConfig(): (typeof PROVIDER_CONFIG)[Provider] {
+  const cfg = vscode.workspace.getConfiguration('deslop');
+  const p = cfg.get<string>('provider', 'openrouter');
+  return p === 'venice' ? PROVIDER_CONFIG.venice : PROVIDER_CONFIG.openrouter;
+}
+
 export function isSelectionTooLong(text: string): boolean {
   return text.length > MAX_CHARS;
 }
@@ -15,16 +39,14 @@ export async function callHumanize(
   text: string,
   docType: DocumentType
 ): Promise<HumanizeResponse> {
-  const config = vscode.workspace.getConfiguration('deslop');
-  const model = config.get<string>('model', 'x-ai/grok-4.1-fast');
+  const cfg = vscode.workspace.getConfiguration('deslop');
+  const provider = getProviderConfig();
+  const model = cfg.get<string>('model', provider.defaultModel);
 
   const client = new OpenAI({
     apiKey,
-    baseURL: 'https://openrouter.ai/api/v1',
-    defaultHeaders: {
-      'HTTP-Referer': 'https://github.com/miaggy/deslop',
-      'X-Title': 'DeSlop',
-    },
+    baseURL: provider.baseURL,
+    defaultHeaders: provider.defaultHeaders,
   });
 
   const systemPrompt = `${SYSTEM_PROMPT}\n\n${MODIFIERS[docType]}`;
@@ -65,13 +87,14 @@ export async function callHumanize(
 
 export async function validateApiKey(apiKey: string): Promise<'valid' | 'invalid' | 'network-error'> {
   try {
+    const provider = getProviderConfig();
     const client = new OpenAI({
       apiKey,
-      baseURL: 'https://openrouter.ai/api/v1',
+      baseURL: provider.baseURL,
     });
     await client.chat.completions.create(
       {
-        model: 'x-ai/grok-4.1-fast',
+        model: provider.defaultModel,
         max_tokens: 1,
         messages: [{ role: 'user', content: 'hi' }],
       },
@@ -80,11 +103,9 @@ export async function validateApiKey(apiKey: string): Promise<'valid' | 'invalid
     return 'valid';
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    // Auth failures have 401 or 403 in the message/status
     if (msg.includes('401') || msg.includes('403') || msg.includes('invalid_api_key') || msg.includes('authentication')) {
       return 'invalid';
     }
-    // Everything else (network timeout, DNS, 5xx) is a connectivity issue
     return 'network-error';
   }
 }

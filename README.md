@@ -55,9 +55,13 @@ It does not generate new content. It does not check grammar. It rewrites what yo
 
 ## Requirements
 
-An [OpenRouter](https://openrouter.ai) API key. OpenRouter provides access to dozens of models under one key — no separate Anthropic, OpenAI, or xAI account required. Keys are free to create; you pay per token at model cost.
+An API key from one of the supported providers:
 
-Get a key at [openrouter.ai/keys](https://openrouter.ai/keys). The extension asks for it on first use and stores it in your OS keychain via VS Code SecretStorage. It is never written to any file.
+**OpenRouter** (default) — aggregates dozens of models under one key, including Grok, Claude, GPT, Llama, and more. No separate provider accounts required. Get a key at [openrouter.ai/keys](https://openrouter.ai/keys).
+
+**Venice** — privacy-focused inference with open-source models (Llama, Mistral, Qwen). No data retention. Get a key at [venice.ai/settings/api](https://venice.ai/settings/api).
+
+The extension asks for a key on first use and stores it in your OS keychain via VS Code SecretStorage. It is never written to any file. Each provider stores its key separately — switching providers prompts for a new key if none is saved for that provider.
 
 ---
 
@@ -84,10 +88,15 @@ Available in the command palette and the editor right-click context menu when te
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `deslop.model` | string | `x-ai/grok-4.1-fast` | Any OpenRouter model ID |
+| `deslop.provider` | enum | `openrouter` | `openrouter` or `venice` |
+| `deslop.model` | string | `x-ai/grok-4.1-fast` | Model ID for the selected provider |
 | `deslop.defaultDocumentType` | enum | `null` | Pre-select doc type; null means always prompt |
 | `deslop.showChangeLog` | boolean | `true` | Show changes panel after each accepted rewrite |
 | `deslop.autoAccept` | boolean | `false` | Skip diff view and apply immediately |
+
+**Model IDs by provider:**
+- OpenRouter: `x-ai/grok-4.1-fast`, `anthropic/claude-sonnet-4-5`, `openai/gpt-4o`, and [hundreds more](https://openrouter.ai/models)
+- Venice: `llama-3.3-70b`, `mistral-31-24b`, `qwen3-4b`, and [more](https://venice.ai/models)
 
 ---
 

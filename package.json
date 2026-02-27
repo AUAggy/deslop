@@ -60,10 +60,16 @@
     "configuration": {
       "title": "DeSlop",
       "properties": {
+        "deslop.provider": {
+          "type": "string",
+          "enum": ["openrouter", "venice"],
+          "default": "openrouter",
+          "description": "AI provider. openrouter: uses openrouter.ai (default model: x-ai/grok-4.1-fast). venice: uses venice.ai (default model: llama-3.3-70b). Each provider requires its own API key."
+        },
         "deslop.model": {
           "type": "string",
           "default": "x-ai/grok-4.1-fast",
-          "description": "OpenRouter model to use for rewrites."
+          "description": "Model ID for the selected provider. OpenRouter: x-ai/grok-4.1-fast, anthropic/claude-sonnet-4-5, etc. Venice: llama-3.3-70b, mistral-31-24b, etc."
         },
         "deslop.defaultDocumentType": {
           "type": [

@@ -2,6 +2,25 @@ import * as vscode from 'vscode';
 import { getApiKey, setApiKey } from '../storage/secrets';
 import { validateApiKey } from '../api/openrouter';
 
+const PROVIDER_INFO = {
+  openrouter: {
+    name: 'OpenRouter',
+    keyUrl: 'https://openrouter.ai/keys',
+    placeholder: 'sk-or-...',
+  },
+  venice: {
+    name: 'Venice',
+    keyUrl: 'https://venice.ai/settings/api',
+    placeholder: 'venice-...',
+  },
+} as const;
+
+function getProviderInfo() {
+  const cfg = vscode.workspace.getConfiguration('deslop');
+  const p = cfg.get<string>('provider', 'openrouter');
+  return p === 'venice' ? PROVIDER_INFO.venice : PROVIDER_INFO.openrouter;
+}
+
 /**
  * Ensures a valid API key is stored. Returns the key, or undefined if the
  * user cancelled or validation failed.
@@ -14,16 +33,17 @@ export async function ensureApiKey(
     return existing;
   }
 
+  const provider = getProviderInfo();
   const action = await vscode.window.showInformationMessage(
-    'DeSlop needs an OpenRouter API key. Enter it now or get one at openrouter.ai/keys.',
+    `DeSlop needs a ${provider.name} API key. Enter it now or get one at ${provider.keyUrl}.`,
     'Enter Key',
     'Get Key'
   );
 
   if (action === 'Get Key') {
-    vscode.env.openExternal(vscode.Uri.parse('https://openrouter.ai/keys'));
+    vscode.env.openExternal(vscode.Uri.parse(provider.keyUrl));
     vscode.window.showInformationMessage(
-      'Get your API key from openrouter.ai/keys, then run Humanize Selection again.'
+      `Get your API key from ${provider.keyUrl}, then run DeSlop Selection again.`
     );
     return undefined;
   }
@@ -38,11 +58,12 @@ export async function ensureApiKey(
 export async function promptAndSaveKey(
   secrets: vscode.SecretStorage
 ): Promise<string | undefined> {
+  const provider = getProviderInfo();
   const key = await vscode.window.showInputBox({
-    prompt: 'Paste your OpenRouter API key',
+    prompt: `Paste your ${provider.name} API key`,
     password: true,
     ignoreFocusOut: true,
-    placeHolder: 'sk-or-...',
+    placeHolder: provider.placeholder,
   });
 
   if (!key) {
@@ -67,7 +88,7 @@ export async function promptAndSaveKey(
 
   if (validationResult !== 'valid') {
     const retry = await vscode.window.showErrorMessage(
-      'API key not valid. Check your key at openrouter.ai/keys.',
+      `API key not valid. Check your key at ${provider.keyUrl}.`,
       'Try Again'
     );
     if (retry === 'Try Again') {
