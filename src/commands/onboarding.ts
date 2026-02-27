@@ -49,7 +49,7 @@ export async function promptAndSaveKey(
     return undefined;
   }
 
-  const valid = await vscode.window.withProgress(
+  const validationResult = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: 'Validating API key...',
@@ -58,7 +58,14 @@ export async function promptAndSaveKey(
     () => validateApiKey(key)
   );
 
-  if (!valid) {
+  if (validationResult === 'network-error') {
+    vscode.window.showErrorMessage(
+      'Could not reach OpenRouter. Check your connection and try again.'
+    );
+    return undefined;
+  }
+
+  if (validationResult !== 'valid') {
     const retry = await vscode.window.showErrorMessage(
       'API key not valid. Check your key at openrouter.ai/keys.',
       'Try Again'

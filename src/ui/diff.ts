@@ -20,49 +20,46 @@ export async function showDiffAndPrompt(
   fs.writeFileSync(origFile, original, 'utf8');
   fs.writeFileSync(rewrittenFile, rewritten, 'utf8');
 
-  const origUri = vscode.Uri.file(origFile);
-  const rewrittenUri = vscode.Uri.file(rewrittenFile);
+  let choice: string | undefined;
+  try {
+    const origUri = vscode.Uri.file(origFile);
+    const rewrittenUri = vscode.Uri.file(rewrittenFile);
 
-  // Track editors before opening diff
-  const editorsBefore = new Set(
-    vscode.window.visibleTextEditors.map((e) => e.document.uri.toString())
-  );
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      origUri,
+      rewrittenUri,
+      'Humanizer: Review Changes'
+    );
 
-  await vscode.commands.executeCommand(
-    'vscode.diff',
-    origUri,
-    rewrittenUri,
-    'Humanizer: Review Changes'
-  );
+    choice = await vscode.window.showInformationMessage(
+      'Accept the rewrite?',
+      { modal: false },
+      'Accept',
+      'Discard'
+    );
 
-  const choice = await vscode.window.showInformationMessage(
-    'Accept the rewrite?',
-    { modal: false },
-    'Accept',
-    'Discard'
-  );
+    // Close the diff tab (best-effort)
+    const tabsToClose = vscode.window.tabGroups.all
+      .flatMap((g) => g.tabs)
+      .filter((tab) => {
+        if (tab.input instanceof vscode.TabInputTextDiff) {
+          const diffInput = tab.input as vscode.TabInputTextDiff;
+          return (
+            diffInput.original.fsPath === origFile ||
+            diffInput.modified.fsPath === rewrittenFile
+          );
+        }
+        return false;
+      });
 
-  // Close the diff editor: find editors whose URI matches our temp files
-  const tabsToClose = vscode.window.tabGroups.all
-    .flatMap((g) => g.tabs)
-    .filter((tab) => {
-      if (tab.input instanceof vscode.TabInputTextDiff) {
-        const diffInput = tab.input as vscode.TabInputTextDiff;
-        return (
-          diffInput.original.fsPath === origFile ||
-          diffInput.modified.fsPath === rewrittenFile
-        );
-      }
-      return false;
-    });
-
-  for (const tab of tabsToClose) {
-    await vscode.window.tabGroups.close(tab);
+    for (const tab of tabsToClose) {
+      try { await vscode.window.tabGroups.close(tab); } catch { /* ignore */ }
+    }
+  } finally {
+    try { fs.unlinkSync(origFile); } catch { /* ignore */ }
+    try { fs.unlinkSync(rewrittenFile); } catch { /* ignore */ }
   }
-
-  // Clean up temp files
-  try { fs.unlinkSync(origFile); } catch { /* ignore */ }
-  try { fs.unlinkSync(rewrittenFile); } catch { /* ignore */ }
 
   return choice === 'Accept';
 }

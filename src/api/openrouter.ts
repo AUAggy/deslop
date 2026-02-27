@@ -63,7 +63,7 @@ export async function callHumanize(
   return parsed;
 }
 
-export async function validateApiKey(apiKey: string): Promise<boolean> {
+export async function validateApiKey(apiKey: string): Promise<'valid' | 'invalid' | 'network-error'> {
   try {
     const client = new OpenAI({
       apiKey,
@@ -77,8 +77,14 @@ export async function validateApiKey(apiKey: string): Promise<boolean> {
       },
       { timeout: 10000 }
     );
-    return true;
-  } catch {
-    return false;
+    return 'valid';
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Auth failures have 401 or 403 in the message/status
+    if (msg.includes('401') || msg.includes('403') || msg.includes('invalid_api_key') || msg.includes('authentication')) {
+      return 'invalid';
+    }
+    // Everything else (network timeout, DNS, 5xx) is a connectivity issue
+    return 'network-error';
   }
 }

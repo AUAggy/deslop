@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 const PROSE_EXTENSIONS = new Set(['.md', '.txt', '.markdown', '.text']);
+const PROSE_FILENAMES = new Set(['license', 'readme', 'changelog', 'authors', 'contributors', 'notice', 'copying']);
 
 /**
  * Returns true if the selection is prose and safe to rewrite.
@@ -13,9 +15,16 @@ export async function isProseSelection(
   selection: vscode.Selection
 ): Promise<boolean> {
   const fileName = document.fileName;
-  const ext = fileName.slice(fileName.lastIndexOf('.')).toLowerCase();
+  const dotIndex = fileName.lastIndexOf('.');
+  const ext = dotIndex !== -1 ? fileName.slice(dotIndex).toLowerCase() : '';
 
   if (PROSE_EXTENSIONS.has(ext)) {
+    return true;
+  }
+
+  // Check extensionless plain-text files by base name
+  const baseName = path.basename(fileName).toLowerCase();
+  if (PROSE_FILENAMES.has(baseName)) {
     return true;
   }
 

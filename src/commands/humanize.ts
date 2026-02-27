@@ -34,6 +34,7 @@ export async function humanizeSelection(
   }
 
   const selectedText = editor.document.getText(selection);
+  const documentVersionAtStart = editor.document.version;
 
   // G5: reject code selections
   const prose = await isProseSelection(editor.document, selection);
@@ -93,7 +94,6 @@ export async function humanizeSelection(
   try {
     result = await callHumanize(apiKey, selectedText, docType);
   } catch (err: unknown) {
-    hideSpinner();
     // Extract a safe, short message — never log or display the full error object
     // which could contain request headers including the API key
     const rawMsg = err instanceof Error ? err.message : String(err);
@@ -148,6 +148,14 @@ export async function humanizeSelection(
   }
 
   if (!accepted) {
+    return;
+  }
+
+  // Guard: document may have changed during the async gap
+  if (editor.document.isClosed || editor.document.version !== documentVersionAtStart) {
+    vscode.window.showErrorMessage(
+      'Document changed while humanizing. Re-select and try again.'
+    );
     return;
   }
 
