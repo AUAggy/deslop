@@ -64,7 +64,7 @@
           "type": "string",
           "enum": ["openrouter", "venice"],
           "default": "openrouter",
-          "description": "AI provider. openrouter: uses openrouter.ai (default model: x-ai/grok-4.1-fast). venice: uses venice.ai (default model: llama-3.3-70b). Each provider requires its own API key."
+          "description": "AI provider. openrouter: uses openrouter.ai (default model: x-ai/grok-4.1-fast). venice: uses venice.ai (default model: grok-41-fast). Each provider requires its own API key."
         },
         "deslop.model": {
           "type": "string",

@@ -96,7 +96,7 @@ Available in the command palette and the editor right-click context menu when te
 
 **Model IDs by provider:**
 - OpenRouter: `x-ai/grok-4.1-fast`, `anthropic/claude-sonnet-4-5`, `openai/gpt-4o`, and [hundreds more](https://openrouter.ai/models)
-- Venice: `llama-3.3-70b`, `mistral-31-24b`, `qwen3-4b`, and [more](https://venice.ai/models)
+- Venice: `grok-41-fast`, `llama-3.3-70b`, `mistral-31-24b`, and [more](https://venice.ai/models)
 
 ---
 

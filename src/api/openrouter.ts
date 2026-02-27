@@ -17,7 +17,7 @@ const PROVIDER_CONFIG = {
   },
   venice: {
     baseURL: 'https://api.venice.ai/api/v1',
-    defaultModel: 'llama-3.3-70b',
+    defaultModel: 'grok-41-fast',
     defaultHeaders: {},
   },
 } as const;
