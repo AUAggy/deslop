@@ -1,7 +1,7 @@
 {
   "name": "humanizer",
-  "displayName": "Humanizer",
-  "description": "Rewrites selected prose to remove AI writing patterns",
+  "displayName": "Humanizer — AI Slop Remover",
+  "description": "Rewrites AI-generated prose into clear technical writing. Removes slop vocabulary, padding phrases, decorative emojis, and cliché structures from READMEs, docstrings, commit messages, and blog posts.",
   "version": "0.1.0",
   "publisher": "humanizer-dev",
   "repository": {
@@ -12,8 +12,30 @@
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Formatters"
   ],
+  "keywords": [
+    "ai",
+    "slop",
+    "prose",
+    "writing",
+    "documentation",
+    "readme",
+    "humanizer",
+    "llm",
+    "chatgpt",
+    "copilot",
+    "rewrite",
+    "editing",
+    "technical writing",
+    "ai writing",
+    "deSlop"
+  ],
+  "galleryBanner": {
+    "color": "#1e1e2e",
+    "theme": "dark"
+  },
   "activationEvents": [
     "onCommand:humanizer.humanizeSelection"
   ],
