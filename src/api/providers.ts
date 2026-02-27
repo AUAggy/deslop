@@ -4,7 +4,7 @@ import { SYSTEM_PROMPT } from '../prompts/system';
 import { MODIFIERS } from '../prompts/modifiers';
 import type { DocumentType, HumanizeResponse } from '../types';
 
-const MAX_CHARS = 4000 * 4; // ~4000 tokens at ~4 chars/token
+export const MAX_CHARS = 4000 * 4; // ~4000 tokens at ~4 chars/token
 
 const PROVIDER_CONFIG = {
   openrouter: {

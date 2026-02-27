@@ -44,7 +44,7 @@ export async function isProseSelection(
   return hasProseLines;
 }
 
-function isCommentOrStringLine(trimmedLine: string): boolean {
+export function isCommentOrStringLine(trimmedLine: string): boolean {
   return (
     trimmedLine.startsWith('//') ||
     trimmedLine.startsWith('#') ||

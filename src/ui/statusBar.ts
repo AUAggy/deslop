@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 let statusItem: vscode.StatusBarItem | undefined;
 
-export function showSpinner(context: vscode.ExtensionContext): void {
+export function showSpinner(context: vscode.ExtensionContext, label?: string): void {
   if (!statusItem) {
     statusItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Left,
@@ -10,7 +10,8 @@ export function showSpinner(context: vscode.ExtensionContext): void {
     );
     context.subscriptions.push(statusItem);
   }
-  statusItem.text = '$(loading~spin) DeSlopping...';
+  const suffix = label ? ` ${label}...` : '...';
+  statusItem.text = `$(loading~spin) DeSlopping${suffix}`;
   statusItem.show();
 }
 

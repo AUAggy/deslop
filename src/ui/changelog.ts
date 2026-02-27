@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { ChangeEntry } from '../types';
+import type { ChangeEntry, DocumentType } from '../types';
 
 let channel: vscode.OutputChannel | undefined;
 
@@ -10,17 +10,24 @@ export function getChannel(): vscode.OutputChannel {
   return channel;
 }
 
-export function logChanges(changes: ChangeEntry[]): void {
+export function logChanges(changes: ChangeEntry[], docType?: DocumentType): void {
   const ch = getChannel();
+  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const header = docType ? `[${docType} -- ${timestamp}]` : `[${timestamp}]`;
+  ch.appendLine(header);
   if (changes.length === 0) {
-    ch.appendLine('[No rule violations found — text already clean]');
+    ch.appendLine('[No rule violations found -- text already clean]');
   } else {
     changes.forEach((c) => {
-      ch.appendLine(`• ${c.pattern} — ${c.action}`);
+      ch.appendLine(`• ${c.pattern} -- ${c.action}`);
     });
   }
   ch.appendLine('');
   ch.show(true);
+}
+
+export function showChangelog(): void {
+  getChannel().show(false);
 }
 
 export function disposeChannel(): void {

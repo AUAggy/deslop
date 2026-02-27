@@ -14,7 +14,9 @@ const DOC_TYPE_ITEMS: Array<{ label: string; value: DocumentType }> = [
   { label: 'Blog / Article', value: 'Blog/Article' },
 ];
 
-let lastDocType: DocumentType | undefined;
+export function approximateWordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
 
 export async function humanizeSelection(
   context: vscode.ExtensionContext
@@ -45,10 +47,11 @@ export async function humanizeSelection(
     return;
   }
 
-  // Token length guard
+  // Token length guard -- show word count so user knows how much to trim
   if (isSelectionTooLong(selectedText)) {
+    const wordCount = approximateWordCount(selectedText);
     vscode.window.showErrorMessage(
-      'Selection exceeds ~3,000 words. Select a shorter passage.'
+      `Selection is ~${wordCount.toLocaleString()} words. Limit is ~3,000. Select a shorter passage.`
     );
     return;
   }
@@ -59,16 +62,15 @@ export async function humanizeSelection(
     return;
   }
 
-  // Document type
+  // Document type -- persist last choice across sessions via globalState
   const config = vscode.workspace.getConfiguration('deslop');
   const defaultType = config.get<DocumentType | null>('defaultDocumentType', null);
   let docType: DocumentType | undefined;
 
   if (defaultType) {
-    // Setting overrides: skip Quick Pick entirely
     docType = defaultType;
   } else {
-    // Always show Quick Pick; put last-used type first if available
+    const lastDocType = context.globalState.get<DocumentType>('deslop.lastDocType');
     const items = lastDocType
       ? [
           DOC_TYPE_ITEMS.find((i) => i.value === lastDocType)!,
@@ -84,18 +86,18 @@ export async function humanizeSelection(
       return;
     }
     docType = DOC_TYPE_ITEMS.find((i) => i.label === picked)!.value;
+    await context.globalState.update('deslop.lastDocType', docType);
   }
 
-  lastDocType = docType;
+  // Status bar label: doc type + provider
+  const provider = config.get<string>('provider', 'openrouter');
+  const providerLabel = provider === 'venice' ? 'Venice' : 'OpenRouter';
+  showSpinner(context, `${docType} via ${providerLabel}`);
 
-  // Inference
-  showSpinner(context);
   let result;
   try {
     result = await callHumanize(apiKey, selectedText, docType);
   } catch (err: unknown) {
-    // Extract a safe, short message — never log or display the full error object
-    // which could contain request headers including the API key
     const rawMsg = err instanceof Error ? err.message : String(err);
     const msg = rawMsg.slice(0, 500).split('\n')[0];
 
@@ -137,7 +139,6 @@ export async function humanizeSelection(
     hideSpinner();
   }
 
-  // Check autoAccept before diff view
   const autoAccept = config.get<boolean>('autoAccept', false);
 
   let accepted: boolean;
@@ -148,6 +149,14 @@ export async function humanizeSelection(
   }
 
   if (!accepted) {
+    // Try Again lets the user re-run without re-selecting
+    const again = await vscode.window.showInformationMessage(
+      'Rewrite discarded.',
+      'Try Again'
+    );
+    if (again === 'Try Again') {
+      return humanizeSelection(context);
+    }
     return;
   }
 
@@ -159,7 +168,6 @@ export async function humanizeSelection(
     return;
   }
 
-  // Replace selection in editor
   await editor.edit((editBuilder) => {
     editBuilder.replace(selection, result.rewritten);
   });
@@ -167,6 +175,18 @@ export async function humanizeSelection(
   // Changelog
   const showLog = config.get<boolean>('showChangeLog', true);
   if (showLog) {
-    logChanges(result.changes);
+    logChanges(result.changes, docType);
+  }
+
+  // One-time tip to assign a keyboard shortcut -- shown after first successful accept
+  if (!context.globalState.get('deslop.shownKeyboardTip')) {
+    await context.globalState.update('deslop.shownKeyboardTip', true);
+    const open = await vscode.window.showInformationMessage(
+      'Tip: DeSlop Selection is bound to Shift+Alt+D by default. You can rebind it in Keyboard Shortcuts.',
+      'Open Keyboard Shortcuts'
+    );
+    if (open === 'Open Keyboard Shortcuts') {
+      vscode.commands.executeCommand('workbench.action.openGlobalKeybindings');
+    }
   }
 }

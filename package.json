@@ -41,7 +41,9 @@
     "theme": "dark"
   },
   "activationEvents": [
-    "onCommand:deslop.humanizeSelection"
+    "onCommand:deslop.humanizeSelection",
+    "onCommand:deslop.resetApiKey",
+    "onCommand:deslop.showChanges"
   ],
   "main": "./dist/extension",
   "contributes": {
@@ -50,6 +52,24 @@
         "command": "deslop.humanizeSelection",
         "title": "DeSlop Selection",
         "category": "DeSlop"
+      },
+      {
+        "command": "deslop.resetApiKey",
+        "title": "Reset API Key",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.showChanges",
+        "title": "Show Last Changes",
+        "category": "DeSlop"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "deslop.humanizeSelection",
+        "key": "shift+alt+d",
+        "mac": "shift+alt+d",
+        "when": "editorHasSelection && editorTextFocus"
       }
     ],
     "menus": {
@@ -109,7 +129,7 @@
     "compile": "tsc -p ./",
     "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
+    "lint": "eslint src --ext .ts",
     "test": "vscode-test"
   },
   "devDependencies": {

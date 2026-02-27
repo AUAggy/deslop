@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getApiKey, setApiKey } from '../storage/secrets';
+import { getApiKey, setApiKey, deleteApiKey } from '../storage/secrets';
 import { validateApiKey } from '../api/providers';
 
 const PROVIDER_INFO = {
@@ -100,4 +100,9 @@ export async function promptAndSaveKey(
   await setApiKey(secrets, key);
   vscode.window.showInformationMessage('Key saved. Ready to deslop.');
   return key;
+}
+
+export async function resetApiKey(secrets: vscode.SecretStorage): Promise<void> {
+  await deleteApiKey(secrets);
+  await promptAndSaveKey(secrets);
 }
