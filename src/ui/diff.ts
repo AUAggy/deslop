@@ -15,8 +15,8 @@ export async function showDiffAndPrompt(
 ): Promise<boolean> {
   const ts = Date.now();
   const tmpDir = os.tmpdir();
-  const origFile = path.join(tmpDir, `humanizer-original-${ts}.txt`);
-  const rewrittenFile = path.join(tmpDir, `humanizer-rewritten-${ts}.txt`);
+  const origFile = path.join(tmpDir, `deslop-original-${ts}.txt`);
+  const rewrittenFile = path.join(tmpDir, `deslop-rewritten-${ts}.txt`);
 
   fs.writeFileSync(origFile, original, 'utf8');
   fs.writeFileSync(rewrittenFile, rewritten, 'utf8');
@@ -28,7 +28,7 @@ export async function showDiffAndPrompt(
       'vscode.diff',
       vscode.Uri.file(origFile),
       vscode.Uri.file(rewrittenFile),
-      'Humanizer: Review Changes'
+      'DeSlop: Review Changes'
     );
 
     choice = await waitForStatusBarChoice();
@@ -66,7 +66,7 @@ function waitForStatusBarChoice(): Promise<'Accept' | 'Discard'> {
 
     const acceptItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
     acceptItem.text = '$(check) Accept rewrite';
-    acceptItem.tooltip = 'Apply the humanized text';
+    acceptItem.tooltip = 'Apply the deslopped text';
     acceptItem.command = acceptCmd;
     acceptItem.backgroundColor = new vscode.ThemeColor('statusBarItem.prominentBackground');
 
