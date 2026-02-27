@@ -67,10 +67,17 @@ The extension asks for a key on first use and stores it in your OS keychain via 
 
 ## Getting started
 
-1. Install the extension
-2. Run **DeSlop Selection** from the command palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
-3. Paste your API key when prompted
-4. Select text, run the command, pick a document type, review the diff
+**VSCodium:** Search "DeSlop" in the Extensions panel (pulls from Open VSX Registry).
+
+**VS Code:** The extension is not yet listed on the VS Code Marketplace. Install manually:
+1. Download `deslop-0.1.0.vsix` from the [latest GitHub release](https://github.com/AUAggy/deslop/releases)
+2. Open VS Code, press `Cmd+Shift+P` / `Ctrl+Shift+P`
+3. Run `Extensions: Install from VSIX`, select the downloaded file
+
+Then:
+1. Run **DeSlop Selection** from the command palette
+2. Paste your API key when prompted
+3. Select text, run the command, pick a document type, review the diff
 
 ---
 
@@ -95,8 +102,8 @@ Available in the command palette and the editor right-click context menu when te
 | `deslop.autoAccept` | boolean | `false` | Skip diff view and apply immediately |
 
 **Model IDs by provider:**
-- OpenRouter: `x-ai/grok-4.1-fast`, `anthropic/claude-sonnet-4-5`, `openai/gpt-4o`, and [hundreds more](https://openrouter.ai/models)
-- Venice: `grok-41-fast`, `llama-3.3-70b`, `mistral-31-24b`, and [more](https://venice.ai/models)
+- OpenRouter: `x-ai/grok-4.1-fast`, `anthropic/claude-sonnet-4.6`, `openai/gpt-5.2`, and [hundreds more](https://openrouter.ai/models)
+- Venice: `grok-41-fast`, `claude-sonnet-4-6`, `kimi-k2-5`, and [more](https://docs.venice.ai/models/overview)
 
 ---
 
