@@ -1,4 +1,24 @@
-# DeSlop
+<p align="center">
+  <img src="images/icon.png" width="96" alt="DeSlop">
+</p>
+
+<h1 align="center">DeSlop</h1>
+
+<p align="center">
+  <a href="https://open-vsx.org/extension/AUAggy/deslop"><img src="https://img.shields.io/open-vsx/v/AUAggy/deslop?label=Open%20VSX&color=c160ef" alt="Open VSX"></a>
+  <a href="https://github.com/AUAggy/deslop/releases"><img src="https://img.shields.io/github/v/release/AUAggy/deslop?label=Release&color=e53e3e" alt="GitHub Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/AUAggy/deslop?color=555" alt="MIT License"></a>
+</p>
+
+<p align="center">
+  <a href="#getting-started">Install</a> &bull;
+  <a href="#what-it-does">What it does</a> &bull;
+  <a href="#what-it-removes">What it removes</a> &bull;
+  <a href="#settings">Settings</a> &bull;
+  <a href="#privacy">Privacy</a>
+</p>
+
+---
 
 Your AI assistant writes documentation the way a nervous intern writes a performance review: inflated, hedged, and padded with words that sound important but carry no information. "Leverage synergies." "Foster innovation." "Seamlessly facilitate a paradigm shift."
 
