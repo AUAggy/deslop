@@ -3,7 +3,7 @@
   "displayName": "DeSlop - AI Slop Remover",
   "description": "Rewrites AI-generated prose into clear technical writing. Removes slop vocabulary, padding phrases, decorative emojis, and cliche structures from READMEs, docstrings, commit messages, and blog posts. Works with OpenRouter and Venice.ai. Any model, your API key.",
   "version": "0.1.0",
-  "publisher": "humanizer-dev",
+  "publisher": "AUAggy",
   "repository": {
     "type": "git",
     "url": "https://github.com/AUAggy/deslop"
