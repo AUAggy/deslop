@@ -116,7 +116,7 @@ export async function humanizeSelection(
       msg.includes('invalid_api_key')
     ) {
       const action = await vscode.window.showErrorMessage(
-        'API key rejected. Check your key at openrouter.ai/keys.',
+        'API key rejected. Check your key in your provider settings.',
         'Update Key'
       );
       if (action === 'Update Key') {
@@ -126,7 +126,7 @@ export async function humanizeSelection(
     }
 
     const action = await vscode.window.showErrorMessage(
-      'OpenRouter API returned an error. Try again in a moment.',
+      'API returned an error. Try again in a moment.',
       'Retry'
     );
     if (action === 'Retry') {

@@ -6,7 +6,7 @@
   "publisher": "humanizer-dev",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/AUAggy/deslop"
   },
   "engines": {
     "vscode": "^1.85.0"
