@@ -14,8 +14,10 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": ["onCommand:humanizer.humanizeSelection"],
-  "main": "./out/extension",
+  "activationEvents": [
+    "onCommand:humanizer.humanizeSelection"
+  ],
+  "main": "./dist/extension",
   "contributes": {
     "commands": [
       {
@@ -42,8 +44,17 @@
           "description": "OpenRouter model to use for rewrites."
         },
         "humanizer.defaultDocumentType": {
-          "type": ["string", "null"],
-          "enum": [null, "README", "Docstring/Comment", "Commit Message", "Blog/Article"],
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "README",
+            "Docstring/Comment",
+            "Commit Message",
+            "Blog/Article"
+          ],
           "default": null,
           "description": "Pre-select document type; null means always prompt."
         },
@@ -61,9 +72,10 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run bundle",
+    "bundle": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test"
@@ -76,6 +88,7 @@
     "@typescript-eslint/parser": "^6.15.0",
     "@vscode/test-cli": "^0.0.4",
     "@vscode/test-electron": "^2.3.8",
+    "esbuild": "^0.27.3",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3"
   },
