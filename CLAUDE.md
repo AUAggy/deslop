@@ -4,15 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-Pre-development. The only file currently in the repo is the product brief: `product-brief-vscode-humanizer.md`. That document is the single source of truth for all scope, architecture, and constraint decisions.
+V1 implementation complete on branch `feat/humanizer-v1`. The product brief (`product-brief-vscode-humanizer.md`) is the single source of truth for all scope, architecture, and constraint decisions.
 
-## What to Build
+## What This Is
 
-A VS Code extension ("Humanizer") that rewrites selected prose using the Anthropic API to remove AI-generated writing patterns. V1 is a single command: "Humanize Selection".
+A VS Code extension ("Humanizer") that rewrites selected prose via OpenRouter API to remove AI-generated writing patterns. Single command: "Humanize Selection".
 
 ## Commands
-
-Once scaffolded with `yo code` (TypeScript, no webpack, ESLint enabled):
 
 ```bash
 npm run compile        # TypeScript compilation
@@ -50,7 +48,7 @@ src/
 - **System prompt content**: lives only in `src/prompts/system.ts`. No inline prompt strings elsewhere.
 - **No external npm dependencies** beyond `vscode` (built-in) and `openai` (OpenRouter uses the OpenAI-compatible API). Use native Node `fetch` for HTTP.
 - **V1 = one command only**: "Humanize Selection" (`humanizer.humanizeSelection`). No sidebar, no CodeLens, no file-level rewrite.
-- **No backend in V1**: user provides their own Anthropic API key.
+- **No backend in V1**: user provides their own OpenRouter API key.
 - **Do not build anything in Section 7 (V2) or Section 8 (Out of Scope)** of the product brief.
 
 ## Key Architecture Decisions
