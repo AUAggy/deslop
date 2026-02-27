@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ensureApiKey, promptAndSaveKey } from './onboarding';
-import { callHumanize, isSelectionTooLong } from '../api/openrouter';
+import { callHumanize, isSelectionTooLong } from '../api/providers';
 import { showDiffAndPrompt } from '../ui/diff';
 import { showSpinner, hideSpinner } from '../ui/statusBar';
 import { logChanges } from '../ui/changelog';

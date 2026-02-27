@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getApiKey, setApiKey } from '../storage/secrets';
-import { validateApiKey } from '../api/openrouter';
+import { validateApiKey } from '../api/providers';
 
 const PROVIDER_INFO = {
   openrouter: {

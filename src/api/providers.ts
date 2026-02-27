@@ -11,7 +11,7 @@ const PROVIDER_CONFIG = {
     baseURL: 'https://openrouter.ai/api/v1',
     defaultModel: 'x-ai/grok-4.1-fast',
     defaultHeaders: {
-      'HTTP-Referer': 'https://github.com/miaggy/deslop',
+      'HTTP-Referer': 'https://github.com/AUAggy/deslop',
       'X-Title': 'DeSlop',
     },
   },

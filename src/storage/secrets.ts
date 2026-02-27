@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
 const KEYS = {
-  openrouter: 'humanizer.openrouterApiKey',
-  venice: 'humanizer.veniceApiKey',
+  openrouter: 'deslop.openrouterApiKey',
+  venice: 'deslop.veniceApiKey',
 } as const;
 
 type Provider = keyof typeof KEYS;
