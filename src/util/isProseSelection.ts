@@ -19,18 +19,20 @@ export async function isProseSelection(
     return true;
   }
 
-  // For source files: check every non-empty line in the selection
+  let hasProseLines = false;
+
   for (let line = selection.start.line; line <= selection.end.line; line++) {
     const lineText = document.lineAt(line).text.trim();
     if (lineText.length === 0) {
-      continue; // skip blank lines
+      continue;
     }
     if (!isCommentOrStringLine(lineText)) {
       return false;
     }
+    hasProseLines = true;
   }
 
-  return true;
+  return hasProseLines;
 }
 
 function isCommentOrStringLine(trimmedLine: string): boolean {
@@ -43,9 +45,6 @@ function isCommentOrStringLine(trimmedLine: string): boolean {
     trimmedLine.startsWith("'''") ||
     trimmedLine.startsWith('--') ||
     trimmedLine.startsWith('<!--') ||
-    // String literals on their own line (docstrings, multiline strings)
-    trimmedLine.startsWith('"') ||
-    trimmedLine.startsWith("'") ||
-    trimmedLine.startsWith('`')
+    trimmedLine.startsWith('//!')  // Rust doc comments
   );
 }

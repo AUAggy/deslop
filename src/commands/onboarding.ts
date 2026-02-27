@@ -22,6 +22,9 @@ export async function ensureApiKey(
 
   if (action === 'Get Key') {
     vscode.env.openExternal(vscode.Uri.parse('https://openrouter.ai/keys'));
+    vscode.window.showInformationMessage(
+      'Get your API key from openrouter.ai/keys, then run Humanize Selection again.'
+    );
     return undefined;
   }
 

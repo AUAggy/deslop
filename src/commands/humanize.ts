@@ -61,11 +61,22 @@ export async function humanizeSelection(
   // Document type
   const config = vscode.workspace.getConfiguration('humanizer');
   const defaultType = config.get<DocumentType | null>('defaultDocumentType', null);
-  let docType: DocumentType | undefined = defaultType ?? lastDocType;
+  let docType: DocumentType | undefined;
 
-  if (!docType) {
+  if (defaultType) {
+    // Setting overrides: skip Quick Pick entirely
+    docType = defaultType;
+  } else {
+    // Always show Quick Pick; put last-used type first if available
+    const items = lastDocType
+      ? [
+          DOC_TYPE_ITEMS.find((i) => i.value === lastDocType)!,
+          ...DOC_TYPE_ITEMS.filter((i) => i.value !== lastDocType),
+        ]
+      : DOC_TYPE_ITEMS;
+
     const picked = await vscode.window.showQuickPick(
-      DOC_TYPE_ITEMS.map((i) => i.label),
+      items.map((i) => i.label),
       { placeHolder: 'Select document type' }
     );
     if (!picked) {
@@ -83,7 +94,10 @@ export async function humanizeSelection(
     result = await callHumanize(apiKey, selectedText, docType);
   } catch (err: unknown) {
     hideSpinner();
-    const msg = err instanceof Error ? err.message : String(err);
+    // Extract a safe, short message — never log or display the full error object
+    // which could contain request headers including the API key
+    const rawMsg = err instanceof Error ? err.message : String(err);
+    const msg = rawMsg.slice(0, 500).split('\n')[0];
 
     if (msg.includes('timed out') || msg.includes('timeout')) {
       const action = await vscode.window.showErrorMessage(
@@ -123,8 +137,16 @@ export async function humanizeSelection(
     hideSpinner();
   }
 
-  // Diff view + Accept/Discard
-  const accepted = await showDiffAndPrompt(selectedText, result.rewritten);
+  // Check autoAccept before diff view
+  const autoAccept = config.get<boolean>('autoAccept', false);
+
+  let accepted: boolean;
+  if (autoAccept) {
+    accepted = true;
+  } else {
+    accepted = await showDiffAndPrompt(selectedText, result.rewritten);
+  }
+
   if (!accepted) {
     return;
   }

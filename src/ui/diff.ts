@@ -23,6 +23,11 @@ export async function showDiffAndPrompt(
   const origUri = vscode.Uri.file(origFile);
   const rewrittenUri = vscode.Uri.file(rewrittenFile);
 
+  // Track editors before opening diff
+  const editorsBefore = new Set(
+    vscode.window.visibleTextEditors.map((e) => e.document.uri.toString())
+  );
+
   await vscode.commands.executeCommand(
     'vscode.diff',
     origUri,
@@ -37,8 +42,23 @@ export async function showDiffAndPrompt(
     'Discard'
   );
 
-  // Close the diff editor
-  await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+  // Close the diff editor: find editors whose URI matches our temp files
+  const tabsToClose = vscode.window.tabGroups.all
+    .flatMap((g) => g.tabs)
+    .filter((tab) => {
+      if (tab.input instanceof vscode.TabInputTextDiff) {
+        const diffInput = tab.input as vscode.TabInputTextDiff;
+        return (
+          diffInput.original.fsPath === origFile ||
+          diffInput.modified.fsPath === rewrittenFile
+        );
+      }
+      return false;
+    });
+
+  for (const tab of tabsToClose) {
+    await vscode.window.tabGroups.close(tab);
+  }
 
   // Clean up temp files
   try { fs.unlinkSync(origFile); } catch { /* ignore */ }
