@@ -2,7 +2,8 @@
   "name": "humanizer",
   "displayName": "Humanizer",
   "description": "Rewrites selected prose to remove AI writing patterns",
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "publisher": "humanizer-dev",
   "repository": {
     "type": "git",
     "url": ""
