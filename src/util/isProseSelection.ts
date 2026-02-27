@@ -18,7 +18,7 @@ export async function isProseSelection(
   const dotIndex = fileName.lastIndexOf('.');
   const ext = dotIndex !== -1 ? fileName.slice(dotIndex).toLowerCase() : '';
 
-  if (PROSE_EXTENSIONS.has(ext)) {
+  if (document.isUntitled || PROSE_EXTENSIONS.has(ext)) {
     return true;
   }
 
