@@ -3,21 +3,61 @@
   "displayName": "Humanizer",
   "description": "Rewrites selected prose to remove AI writing patterns",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": ["onCommand:humanizer.humanizeSelection"],
   "main": "./out/extension",
   "contributes": {
     "commands": [
       {
         "command": "humanizer.humanizeSelection",
-        "title": "Humanize Selection"
+        "title": "Humanize Selection",
+        "category": "Humanizer"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "humanizer.humanizeSelection",
+          "when": "editorHasSelection",
+          "group": "1_modification"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Humanizer",
+      "properties": {
+        "humanizer.model": {
+          "type": "string",
+          "default": "x-ai/grok-4.1-fast",
+          "description": "OpenRouter model to use for rewrites."
+        },
+        "humanizer.defaultDocumentType": {
+          "type": ["string", "null"],
+          "enum": [null, "README", "Docstring/Comment", "Commit Message", "Blog/Article"],
+          "default": null,
+          "description": "Pre-select document type; null means always prompt."
+        },
+        "humanizer.showChangeLog": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show changelog panel after each accepted rewrite."
+        },
+        "humanizer.autoAccept": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip diff view and replace text immediately."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

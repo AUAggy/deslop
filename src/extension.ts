@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
+import { humanizeSelection } from './commands/humanize';
 
-export function activate(context: vscode.ExtensionContext) {
-	console.log('Humanizer extension is now active');
-
-	const disposable = vscode.commands.registerCommand('humanizer.humanizeSelection', () => {
-		vscode.window.showInformationMessage('Humanize Selection: not yet implemented');
-	});
-
-	context.subscriptions.push(disposable);
+export function activate(context: vscode.ExtensionContext): void {
+  const disposable = vscode.commands.registerCommand(
+    'humanizer.humanizeSelection',
+    () => humanizeSelection(context)
+  );
+  context.subscriptions.push(disposable);
 }
 
-export function deactivate() {}
+export function deactivate(): void {
+  // nothing to clean up
+}
