@@ -1,0 +1,29 @@
+import * as vscode from 'vscode';
+import type { ChangeEntry } from '../types';
+
+let channel: vscode.OutputChannel | undefined;
+
+export function getChannel(): vscode.OutputChannel {
+  if (!channel) {
+    channel = vscode.window.createOutputChannel('Humanizer: Changes');
+  }
+  return channel;
+}
+
+export function logChanges(changes: ChangeEntry[]): void {
+  const ch = getChannel();
+  if (changes.length === 0) {
+    ch.appendLine('[No rule violations found — text already clean]');
+  } else {
+    changes.forEach((c) => {
+      ch.appendLine(`• ${c.pattern} — ${c.action}`);
+    });
+  }
+  ch.appendLine('');
+  ch.show(true);
+}
+
+export function disposeChannel(): void {
+  channel?.dispose();
+  channel = undefined;
+}
