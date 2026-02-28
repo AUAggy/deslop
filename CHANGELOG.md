@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.1.2 -- 2026-02-28
+
+Two things broke. One visibly, one silently. Both fixed.
+
+**Accepting a rewrite no longer fails silently.** If you were using DeSlop in a single-column layout, or VS Code decided to open the diff in a preview tab, accepting the diff did nothing. No error. No change. Just your original slop, untouched, while the extension quietly moved on with its life. The fix routes the edit through a document-level API that does not require the original editor tab to be open. It should have done this from the start.
+
+**Error messages now tell you what the error is.** Previously, any API failure that was not a timeout or an invalid key produced "API returned an error. Try again in a moment." This is technically true and completely useless. It was masking 404s, 429s, model-not-found errors, and whatever else the provider felt like returning. The message now includes the actual error. A user discovered this immediately when switching from OpenRouter to Venice and forgetting to update the model ID. The provider helpfully suggested three alternatives in the error. DeSlop was previously hiding that suggestion behind a shrug.
+
+**The README now has a before/after.** It is a block of maximally sloppy AI prose followed by what DeSlop does to it. The before text was written specifically for this purpose and is not representative of any real project. The after text was produced by DeSlop. The HN upvote count is accurate.
+
+*If you find a bug, open an issue. If the rewrite is bad, that is the model's fault and also partially mine for picking it.*
+
+---
+
 ## v0.1.1 -- 2026-02-28
 
 I used this thing for 4 hours. Here is what I fixed because I got tired of my own complaints.

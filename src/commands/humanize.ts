@@ -128,7 +128,7 @@ export async function humanizeSelection(
     }
 
     const action = await vscode.window.showErrorMessage(
-      'API returned an error. Try again in a moment.',
+      `API error: ${msg}`,
       'Retry'
     );
     if (action === 'Retry') {
@@ -168,9 +168,9 @@ export async function humanizeSelection(
     return;
   }
 
-  await editor.edit((editBuilder) => {
-    editBuilder.replace(selection, result.rewritten);
-  });
+  const workspaceEdit = new vscode.WorkspaceEdit();
+  workspaceEdit.replace(editor.document.uri, selection, result.rewritten);
+  await vscode.workspace.applyEdit(workspaceEdit);
 
   // Changelog
   const showLog = config.get<boolean>('showChangeLog', true);

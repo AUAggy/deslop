@@ -25,6 +25,10 @@ Your AI assistant writes documentation the way a nervous intern writes a perform
 
 DeSlop fixes that. Select the text, run the command, review the diff, accept or discard. The result reads like a person wrote it, specifically a person who knows what they are talking about and has no patience for filler.
 
+<p align="center">
+  <img src="images/deslop-before-after.png" alt="DeSlop before and after comparison" style="max-width: 100%;">
+</p>
+
 ---
 
 ## What it does
