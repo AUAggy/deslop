@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.3 -- 2026-02-28
+
+Fixed the before/after screenshot not displaying on the VS Code Marketplace and Open VSX. Relative image paths do not resolve on either marketplace. Switched to an absolute GitHub raw URL. The image was always there. Nobody could see it.
+
+---
+
 ## v0.1.2 -- 2026-02-28
 
 Two things broke. One visibly, one silently. Both fixed.
