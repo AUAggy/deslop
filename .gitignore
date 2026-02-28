@@ -5,3 +5,4 @@ node_modules/
 *.vsix
 docs/
 CLAUDE.md
+.DS_Store
