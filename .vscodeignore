@@ -12,3 +12,6 @@ vsc-extension-quickstart.md
 **/*.ts
 docs/**
 product-brief-vscode-humanizer.md
+plans/**
+tests/**
+CODE-DESLOP-ANALYSIS.md

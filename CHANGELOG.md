@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.4 -- 2026-04-04
+
+Docstrings and code comments now work properly. Three things changed.
+
+**Python docstrings no longer get rejected.** If you selected the interior lines of a `"""` block -- the actual prose, not the delimiters -- DeSlop told you it only rewrites prose, not code. Technically true. Also wrong. Those lines are documentation. They pass now.
+
+**The document type prompt disappears when it has an obvious answer.** Select a comment or docstring in a source file and DeSlop applies the Docstring/Comment rules directly -- no prompt. Works for `.py`, `.ts`, `.js`, `.ps1`, and any other source file. Prose in a `.md` file still shows the prompt. If you have `defaultDocumentType` set in settings, that wins.
+
+**Code regions inside prose are protected.** Triple-backtick fences, inline `code` spans, and YAML frontmatter are reproduced verbatim. The LLM was usually leaving them alone anyway. Now it is told to.
+
+The Docstring/Comment rules are tighter too. The old modifier said "be precise." The new one specifies what to cut (preambles, type restatements, passive constructions, AI documentation tells), what to keep (constraints, the why behind non-obvious behaviour, `@throws` conditions), and what voice to use. Structural markers -- JSDoc tags, Python section headers, PowerShell help keywords -- are preserved exactly. `@example` code blocks inside JSDoc are untouched.
+
+*PowerShell `<# ... #>` block comments also work now. Nobody asked for this specifically. It seemed wrong to fix Python and not PowerShell.*
+
+---
+
 ## v0.1.3 -- 2026-02-28
 
 Fixed the before/after screenshot not displaying on the VS Code Marketplace and Open VSX. Relative image paths do not resolve on either marketplace. Switched to an absolute GitHub raw URL. The image was always there. Nobody could see it.

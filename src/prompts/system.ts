@@ -46,6 +46,13 @@ Remove or replace the following when used as decorative prose structure (not in 
 - Light bulb: 💡 (ideas that weren't insights)
 Smart typography introduced by LLMs: replace "smart quotes" " " with straight quotes " ", 'smart apostrophes' ' ' with ', em-dashes — with hyphens or rewrites, en-dashes – with hyphens, ellipses … with three periods.
 
+CODE REGION PRESERVATION:
+Never modify content inside these regions. Reproduce them character-for-character:
+- Triple-backtick fences: everything from the opening \`\`\` (including any language tag) to the closing \`\`\`, inclusive.
+- Inline backtick spans: any \`code\` within prose.
+- YAML/TOML frontmatter: a --- ... --- block at the very start of the document.
+If the entire selection is a code fence with no surrounding prose, return it unchanged in "rewritten" and an empty "changes" array.
+
 STYLE RULES:
 - Active voice and imperative mood for instructions
 - "in order to" → "to"; "due to the fact that" → "because"

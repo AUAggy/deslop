@@ -43,6 +43,9 @@ It does not generate new content. It does not check grammar. It rewrites what yo
 
 - **DeSlop Selection**: one command, available in the command palette and right-click context menu
 - **Four document types**: README, Docstring/Comment, Commit Message, Blog/Article. Each applies a different set of style constraints.
+- **Smart doc type inference**: when you select a comment or docstring in a source file, DeSlop skips the prompt and applies the Docstring/Comment rules automatically.
+- **Full docstring support**: Python `"""` and `'''` blocks, PowerShell `<# ... #>` blocks, JSDoc, and all `//`- and `#`-style comments accepted. Interior lines of multi-line docstrings are handled correctly.
+- **Code region preservation**: content inside triple-backtick fences, inline code spans, and YAML frontmatter is never modified, regardless of what surrounds it.
 - **Diff view**: side-by-side comparison before any text is changed
 - **Status bar Accept/Discard**: persistent buttons so you can read the full diff before deciding
 - **Changes panel**: structured list of every rule violated, shown in the Output panel after each accepted rewrite

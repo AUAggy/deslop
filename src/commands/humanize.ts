@@ -4,7 +4,7 @@ import { callHumanize, isSelectionTooLong } from '../api/providers';
 import { showDiffAndPrompt } from '../ui/diff';
 import { showSpinner, hideSpinner } from '../ui/statusBar';
 import { logChanges } from '../ui/changelog';
-import { isProseSelection } from '../util/isProseSelection';
+import { isProseSelection, isCodeCommentSelection } from '../util/isProseSelection';
 import type { DocumentType } from '../types';
 
 const DOC_TYPE_ITEMS: Array<{ label: string; value: DocumentType }> = [
@@ -70,23 +70,30 @@ export async function humanizeSelection(
   if (defaultType) {
     docType = defaultType;
   } else {
-    const lastDocType = context.globalState.get<DocumentType>('deslop.lastDocType');
-    const items = lastDocType
-      ? [
-          DOC_TYPE_ITEMS.find((i) => i.value === lastDocType)!,
-          ...DOC_TYPE_ITEMS.filter((i) => i.value !== lastDocType),
-        ]
-      : DOC_TYPE_ITEMS;
+    // Auto-infer Docstring/Comment when selection is a comment block in a
+    // source file -- skip the quick-pick entirely, no globalState update.
+    const isCodeComment = await isCodeCommentSelection(editor.document, selection);
+    if (isCodeComment) {
+      docType = 'Docstring/Comment';
+    } else {
+      const lastDocType = context.globalState.get<DocumentType>('deslop.lastDocType');
+      const items = lastDocType
+        ? [
+            DOC_TYPE_ITEMS.find((i) => i.value === lastDocType)!,
+            ...DOC_TYPE_ITEMS.filter((i) => i.value !== lastDocType),
+          ]
+        : DOC_TYPE_ITEMS;
 
-    const picked = await vscode.window.showQuickPick(
-      items.map((i) => i.label),
-      { placeHolder: 'Select document type' }
-    );
-    if (!picked) {
-      return;
+      const picked = await vscode.window.showQuickPick(
+        items.map((i) => i.label),
+        { placeHolder: 'Select document type' }
+      );
+      if (!picked) {
+        return;
+      }
+      docType = DOC_TYPE_ITEMS.find((i) => i.label === picked)!.value;
+      await context.globalState.update('deslop.lastDocType', docType);
     }
-    docType = DOC_TYPE_ITEMS.find((i) => i.label === picked)!.value;
-    await context.globalState.update('deslop.lastDocType', docType);
   }
 
   // Status bar label: doc type + provider
