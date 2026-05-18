@@ -6,3 +6,6 @@ node_modules/
 docs/
 CLAUDE.md
 .DS_Store
+.vscode/settings.json
+/pnpm-lock.yaml
+/pnpm-workspace.yaml
