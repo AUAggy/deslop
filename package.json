@@ -2,7 +2,7 @@
   "name": "deslop",
   "displayName": "DeSlop - AI Slop Remover",
   "description": "Rewrites AI-generated prose into clear technical writing. Removes slop vocabulary, padding phrases, decorative emojis, and cliche structures from READMEs, docstrings, commit messages, and blog posts. Works with OpenRouter and Venice.ai. Any model, your API key.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publisher": "AUAggy",
   "repository": {
     "type": "git",
@@ -91,12 +91,12 @@
             "venice"
           ],
           "default": "openrouter",
-          "description": "AI provider. openrouter: uses openrouter.ai (default model: x-ai/grok-4.1-fast). venice: uses venice.ai (default model: grok-41-fast). Each provider requires its own API key."
+          "description": "AI provider. openrouter: uses openrouter.ai (default model: deepseek/deepseek-v4-flash). venice: uses venice.ai (default model: deepseek-v4-flash). Each provider requires its own API key."
         },
         "deslop.model": {
           "type": "string",
-          "default": "x-ai/grok-4.1-fast",
-          "description": "Model ID for the selected provider. OpenRouter: x-ai/grok-4.1-fast, anthropic/claude-sonnet-4-5, etc. Venice: llama-3.3-70b, mistral-31-24b, etc."
+          "default": "deepseek/deepseek-v4-flash",
+          "description": "Model ID for the selected provider. OpenRouter: deepseek/deepseek-v4-flash, anthropic/claude-sonnet-4-5, etc. Venice: deepseek-v4-flash, llama-3.3-70b, etc."
         },
         "deslop.defaultDocumentType": {
           "type": [
@@ -116,12 +116,12 @@
         "deslop.showChangeLog": {
           "type": "boolean",
           "default": true,
-          "description": "Show changelog panel after each accepted rewrite."
+          "description": "Show changelog panel after each accepted rewrite. (User-scope only; workspace overrides are ignored for safety.)"
         },
         "deslop.autoAccept": {
           "type": "boolean",
           "default": false,
-          "description": "Skip diff view and replace text immediately."
+          "description": "Skip diff view and replace text immediately. (User-scope only; workspace overrides are ignored for safety.)"
         }
       }
     }

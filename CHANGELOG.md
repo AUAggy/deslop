@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.1.5 -- unreleased
+
+This one started as a security review and turned into a release-hardening pass.
+
+**Workspace settings can no longer bypass review.** `autoAccept` and
+`showChangeLog` now honor user-scope settings only, so a cloned repo
+cannot silently skip the diff or hide the changelog through
+`.vscode/settings.json`.
+
+**Diff previews no longer write selected text to `/tmp`.** Review
+buffers now use in-memory `untitled:` documents instead of predictable
+temp files.
+
+**Malformed model change logs are ignored safely.** Bad `changes`
+entries from an LLM response are filtered before logging, so a rewrite
+cannot succeed and then crash on changelog rendering.
+
+**Comment selection handling is stricter and less surprising.**
+Interior docstring selections are accepted, selections ending at column
+0 no longer inspect the next unselected code line, and directive-style
+`#` lines such as `#include` and `#if` are no longer treated as comments.
+
+**Provider handling is less brittle.**
+The default models now use DeepSeek V4 Flash on both providers:
+`deepseek/deepseek-v4-flash` on OpenRouter and `deepseek-v4-flash` on
+Venice. API-key validation now uses the configured model, and
+provider-specific connection errors name the selected provider. Rewrite
+requests now wait longer before timing out, which avoids failing slower
+provider responses that still complete successfully.
+
+*The release process found one more edge case than the scanner did. That is why the test count went up again.*
+
+---
+
 ## v0.1.4 -- 2026-04-04
 
 Docstrings and code comments now work properly. Three things changed.

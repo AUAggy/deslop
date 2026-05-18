@@ -44,13 +44,13 @@ It does not generate new content. It does not check grammar. It rewrites what yo
 - **DeSlop Selection**: one command, available in the command palette and right-click context menu
 - **Four document types**: README, Docstring/Comment, Commit Message, Blog/Article. Each applies a different set of style constraints.
 - **Smart doc type inference**: when you select a comment or docstring in a source file, DeSlop skips the prompt and applies the Docstring/Comment rules automatically.
-- **Full docstring support**: Python `"""` and `'''` blocks, PowerShell `<# ... #>` blocks, JSDoc, and all `//`- and `#`-style comments accepted. Interior lines of multi-line docstrings are handled correctly.
+- **Full docstring support**: Python `"""` and `'''` blocks, PowerShell `<# ... #>` blocks, JSDoc, `//` comments, and language-aware `#` comments. Interior lines of multi-line docstrings are handled correctly.
 - **Code region preservation**: content inside triple-backtick fences, inline code spans, and YAML frontmatter is never modified, regardless of what surrounds it.
 - **Diff view**: side-by-side comparison before any text is changed
 - **Status bar Accept/Discard**: persistent buttons so you can read the full diff before deciding
 - **Changes panel**: structured list of every rule violated, shown in the Output panel after each accepted rewrite
 - **Status bar indicator**: shows inference is running; disappears when done
-- **Configurable model**: defaults to `x-ai/grok-4.1-fast` via OpenRouter; swap to any model you trust
+- **Configurable model**: defaults to DeepSeek V4 Flash on both providers; swap to any model you trust
 
 ---
 
@@ -123,14 +123,14 @@ Available in the command palette and the editor right-click context menu when te
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `deslop.provider` | enum | `openrouter` | `openrouter` or `venice` |
-| `deslop.model` | string | `x-ai/grok-4.1-fast` | Model ID for the selected provider |
+| `deslop.model` | string | `deepseek/deepseek-v4-flash` | Model ID for the selected provider |
 | `deslop.defaultDocumentType` | enum | `null` | Pre-select doc type; null means always prompt |
-| `deslop.showChangeLog` | boolean | `true` | Show changes panel after each accepted rewrite |
-| `deslop.autoAccept` | boolean | `false` | Skip diff view and apply immediately |
+| `deslop.showChangeLog` | boolean | `true` | Show changes panel after each accepted rewrite. User-scope only. |
+| `deslop.autoAccept` | boolean | `false` | Skip diff view and apply immediately. User-scope only. |
 
 **Model IDs by provider:**
-- OpenRouter: `x-ai/grok-4.1-fast`, `anthropic/claude-sonnet-4.6`, `openai/gpt-5.2`, and [hundreds more](https://openrouter.ai/models)
-- Venice: `grok-41-fast`, `claude-sonnet-4-6`, `kimi-k2-5`, and [more](https://docs.venice.ai/models/overview)
+- OpenRouter: `deepseek/deepseek-v4-flash`, `anthropic/claude-sonnet-4.6`, `openai/gpt-5.5`, and [hundreds more](https://openrouter.ai/models)
+- Venice: `deepseek-v4-flash`, `claude-sonnet-4-6`, `kimi-k2-6`, and [more](https://docs.venice.ai/models/overview)
 
 ---
 
