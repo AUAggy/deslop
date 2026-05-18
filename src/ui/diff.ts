@@ -1,45 +1,46 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
+import * as crypto from 'crypto';
 
 /**
  * Opens a native VS Code diff view between original and rewritten text.
- * Shows persistent Accept / Discard buttons in the status bar so the user
- * can review the diff freely before deciding.
+ * Uses in-memory untitled documents so selected text never touches disk.
+ * Shows persistent Accept / Discard buttons in the status bar.
  * Returns true if the user accepted, false otherwise.
  */
 export async function showDiffAndPrompt(
   original: string,
   rewritten: string
 ): Promise<boolean> {
-  const ts = Date.now();
-  const tmpDir = os.tmpdir();
-  const origFile = path.join(tmpDir, `deslop-original-${ts}.txt`);
-  const rewrittenFile = path.join(tmpDir, `deslop-rewritten-${ts}.txt`);
+  const token = crypto.randomBytes(16).toString('hex');
+  const origUri = vscode.Uri.parse(`untitled:DeSlop-original-${token}.txt`);
+  const rewrittenUri = vscode.Uri.parse(`untitled:DeSlop-rewritten-${token}.txt`);
 
-  fs.writeFileSync(origFile, original, 'utf8');
-  fs.writeFileSync(rewrittenFile, rewritten, 'utf8');
+  const edit = new vscode.WorkspaceEdit();
+  edit.insert(origUri, new vscode.Position(0, 0), original);
+  edit.insert(rewrittenUri, new vscode.Position(0, 0), rewritten);
+  await vscode.workspace.applyEdit(edit);
 
   let choice: 'Accept' | 'Discard' | undefined;
 
   try {
     await vscode.commands.executeCommand(
       'vscode.diff',
-      vscode.Uri.file(origFile),
-      vscode.Uri.file(rewrittenFile),
+      origUri,
+      rewrittenUri,
       'DeSlop: Review Changes'
     );
 
     choice = await waitForStatusBarChoice();
 
-    // Close the diff tab
     const tabsToClose = vscode.window.tabGroups.all
       .flatMap((g) => g.tabs)
       .filter((tab) => {
         if (tab.input instanceof vscode.TabInputTextDiff) {
           const d = tab.input as vscode.TabInputTextDiff;
-          return d.original.fsPath === origFile || d.modified.fsPath === rewrittenFile;
+          return (
+            d.original.toString() === origUri.toString() ||
+            d.modified.toString() === rewrittenUri.toString()
+          );
         }
         return false;
       });
@@ -48,8 +49,7 @@ export async function showDiffAndPrompt(
       try { await vscode.window.tabGroups.close(tab); } catch { /* ignore */ }
     }
   } finally {
-    try { fs.unlinkSync(origFile); } catch { /* ignore */ }
-    try { fs.unlinkSync(rewrittenFile); } catch { /* ignore */ }
+    // Nothing to clean up — in-memory documents are discarded with the tab.
   }
 
   return choice === 'Accept';

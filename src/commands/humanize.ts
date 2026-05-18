@@ -18,6 +18,18 @@ export function approximateWordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+export function readTrustedBoolean(
+  config: vscode.WorkspaceConfiguration,
+  key: string,
+  fallback: boolean
+): boolean {
+  const inspected = config.inspect<boolean>(key);
+  if (!inspected) { return fallback; }
+  if (typeof inspected.globalValue === 'boolean') { return inspected.globalValue; }
+  if (typeof inspected.defaultValue === 'boolean') { return inspected.defaultValue; }
+  return fallback;
+}
+
 export async function humanizeSelection(
   context: vscode.ExtensionContext
 ): Promise<void> {
@@ -120,8 +132,8 @@ export async function humanizeSelection(
     }
 
     if (
-      msg.includes('401') ||
-      msg.includes('403') ||
+      /\b401\b/.test(msg) ||
+      /\b403\b/.test(msg) ||
       msg.includes('invalid_api_key')
     ) {
       const action = await vscode.window.showErrorMessage(
@@ -146,7 +158,7 @@ export async function humanizeSelection(
     hideSpinner();
   }
 
-  const autoAccept = config.get<boolean>('autoAccept', false);
+  const autoAccept = readTrustedBoolean(config, 'autoAccept', false);
 
   let accepted: boolean;
   if (autoAccept) {
@@ -180,7 +192,7 @@ export async function humanizeSelection(
   await vscode.workspace.applyEdit(workspaceEdit);
 
   // Changelog
-  const showLog = config.get<boolean>('showChangeLog', true);
+  const showLog = readTrustedBoolean(config, 'showChangeLog', true);
   if (showLog) {
     logChanges(result.changes, docType);
   }

@@ -81,7 +81,7 @@ export async function promptAndSaveKey(
 
   if (validationResult === 'network-error') {
     vscode.window.showErrorMessage(
-      'Could not reach OpenRouter. Check your connection and try again.'
+      `Could not reach ${provider.name}. Check your connection and try again.`
     );
     return undefined;
   }

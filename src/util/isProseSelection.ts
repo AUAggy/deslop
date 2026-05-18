@@ -4,6 +4,71 @@ import * as path from 'path';
 const PROSE_EXTENSIONS = new Set(['.md', '.txt', '.markdown', '.text']);
 const PROSE_FILENAMES = new Set(['license', 'readme', 'changelog', 'authors', 'contributors', 'notice', 'copying']);
 
+// Languages where # is a line-comment marker. Unknown language IDs are
+// treated conservatively so directive-style syntax is not rewritten as prose.
+const HASH_COMMENT_LANGUAGES = new Set([
+  'coffeescript',
+  'dockerfile',
+  'dotenv',
+  'elixir',
+  'git-commit',
+  'git-rebase',
+  'graphql',
+  'ignore',
+  'julia',
+  'makefile',
+  'perl',
+  'perl6',
+  'properties',
+  'python',
+  'r',
+  'ruby',
+  'shellscript',
+  'tcl',
+  'terraform',
+  'yaml',
+]);
+
+type BlockDelim = '"""' | "'''" | '<#';
+
+/**
+ * Best-effort line-by-line block-state transition. Ignores string literals,
+ * so `s = "abc"""` could be misread. Good enough for prose detection.
+ */
+export function nextBlockState(line: string, state: BlockDelim | null): BlockDelim | null {
+  let i = 0;
+  while (i < line.length) {
+    if (state === null) {
+      if (line.startsWith('"""', i)) { state = '"""'; i += 3; continue; }
+      if (line.startsWith("'''", i)) { state = "'''"; i += 3; continue; }
+      if (line.startsWith('<#', i))   { state = '<#';  i += 2; continue; }
+    } else if (state === '"""' && line.startsWith('"""', i)) {
+      state = null; i += 3; continue;
+    } else if (state === "'''" && line.startsWith("'''", i)) {
+      state = null; i += 3; continue;
+    } else if (state === '<#' && line.startsWith('#>', i)) {
+      state = null; i += 2; continue;
+    }
+    i++;
+  }
+  return state;
+}
+
+/**
+ * Scans lines before startLine to determine whether the selection begins
+ * inside an already-open block-comment delimiter.
+ */
+export function detectOpenBlockAbove(
+  document: vscode.TextDocument,
+  startLine: number
+): BlockDelim | null {
+  let state: BlockDelim | null = null;
+  for (let i = 0; i < startLine; i++) {
+    state = nextBlockState(document.lineAt(i).text, state);
+  }
+  return state;
+}
+
 /**
  * Returns true if the selection is prose and safe to rewrite.
  * - .md / .txt files: always prose.
@@ -22,27 +87,30 @@ export async function isProseSelection(
     return true;
   }
 
-  // Check extensionless plain-text files by base name
   const baseName = path.basename(fileName).toLowerCase();
   if (PROSE_FILENAMES.has(baseName)) {
     return true;
   }
 
-  let hasProseLines = false;
-  let insideBlock: '"""' | "'''" | '<#' | null = null;
+  // Treat end-at-col-0 as exclusive: triple-click selections land at col 0
+  // of the line after the last selected line.
+  const endLine =
+    selection.end.character === 0 && selection.end.line > selection.start.line
+      ? selection.end.line - 1
+      : selection.end.line;
 
-  for (let line = selection.start.line; line <= selection.end.line; line++) {
+  let hasProseLines = false;
+  let insideBlock: BlockDelim | null = detectOpenBlockAbove(document, selection.start.line);
+
+  for (let line = selection.start.line; line <= endLine; line++) {
     const lineText = document.lineAt(line).text.trim();
 
     if (lineText.length === 0) {
       continue;
     }
 
-    // Handle block-delimiter state machine
     if (insideBlock === null) {
-      // Check if this line opens a block we track
       if (lineText.startsWith('"""')) {
-        // May open and close on the same line ("""...""")
         const rest = lineText.slice(3);
         insideBlock = rest.includes('"""') ? null : '"""';
         hasProseLines = true;
@@ -60,13 +128,11 @@ export async function isProseSelection(
         continue;
       }
 
-      // Not inside a block — must be a recognised comment line
-      if (!isCommentOrStringLine(lineText)) {
+      if (!isCommentOrStringLine(lineText, document.languageId)) {
         return false;
       }
       hasProseLines = true;
     } else {
-      // Inside a block — check for closing delimiter
       if (insideBlock === '"""' && lineText.includes('"""')) {
         insideBlock = null;
       } else if (insideBlock === "'''" && lineText.includes("'''")) {
@@ -82,10 +148,8 @@ export async function isProseSelection(
 }
 
 /**
- * Returns true when the selection is in a source-code file (not .md, .txt,
- * or other prose extensions) AND isProseSelection returns true.
- *
- * Used by humanize.ts to infer 'Docstring/Comment' without prompting the user.
+ * Returns true when the selection is in a source-code file AND
+ * isProseSelection returns true. Used to auto-infer Docstring/Comment.
  */
 export async function isCodeCommentSelection(
   document: vscode.TextDocument,
@@ -111,18 +175,21 @@ export async function isCodeCommentSelection(
   return isProseSelection(document, selection);
 }
 
-export function isCommentOrStringLine(trimmedLine: string): boolean {
-  return (
-    trimmedLine.startsWith('//') ||
-    trimmedLine.startsWith('#') ||
-    trimmedLine.startsWith('*') ||
-    trimmedLine.startsWith('/*') ||
-    trimmedLine.startsWith('"""') ||
-    trimmedLine.startsWith("'''") ||
-    trimmedLine.startsWith('--') ||
-    trimmedLine.startsWith('<!--') ||
-    trimmedLine.startsWith('//!') ||  // Rust doc comments
-    trimmedLine.startsWith('<#') ||   // PowerShell block comment opener
-    trimmedLine.startsWith('#>')       // PowerShell block comment closer
-  );
+export function isCommentOrStringLine(trimmedLine: string, languageId?: string): boolean {
+  if (trimmedLine.startsWith('//')) { return true; }
+  if (trimmedLine.startsWith('*')) { return true; }
+  if (trimmedLine.startsWith('/*')) { return true; }
+  if (trimmedLine.startsWith('"""')) { return true; }
+  if (trimmedLine.startsWith("'''")) { return true; }
+  if (trimmedLine.startsWith('--')) { return true; }
+  if (trimmedLine.startsWith('<!--')) { return true; }
+  if (trimmedLine.startsWith('//!')) { return true; }
+  if (trimmedLine.startsWith('<#')) { return true; }
+  if (trimmedLine.startsWith('#>')) { return true; }
+  if (trimmedLine.startsWith('#')) {
+    // Keep the no-language fallback for older callers, but only trust # as
+    // a comment when the editor reports a language where that is syntax.
+    return !languageId || HASH_COMMENT_LANGUAGES.has(languageId);
+  }
+  return false;
 }

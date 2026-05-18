@@ -5,11 +5,12 @@ import { MODIFIERS } from '../prompts/modifiers';
 import type { DocumentType, HumanizeResponse } from '../types';
 
 export const MAX_CHARS = 4000 * 4; // ~4000 tokens at ~4 chars/token
+export const HUMANIZE_TIMEOUT_MS = 90000;
 
 const PROVIDER_CONFIG = {
   openrouter: {
     baseURL: 'https://openrouter.ai/api/v1',
-    defaultModel: 'x-ai/grok-4.1-fast',
+    defaultModel: 'deepseek/deepseek-v4-flash',
     defaultHeaders: {
       'HTTP-Referer': 'https://github.com/AUAggy/deslop',
       'X-Title': 'DeSlop',
@@ -17,7 +18,7 @@ const PROVIDER_CONFIG = {
   },
   venice: {
     baseURL: 'https://api.venice.ai/api/v1',
-    defaultModel: 'grok-41-fast',
+    defaultModel: 'deepseek-v4-flash',
     defaultHeaders: {},
   },
 } as const;
@@ -63,7 +64,7 @@ export async function callHumanize(
         },
       ],
     },
-    { timeout: 20000 }
+    { timeout: HUMANIZE_TIMEOUT_MS }
   );
 
   const raw = response.choices[0]?.message?.content;
@@ -82,20 +83,35 @@ export async function callHumanize(
     throw new Error('API response missing required fields');
   }
 
+  parsed.changes = sanitiseChanges(parsed.changes);
+
   return parsed;
+}
+
+export function sanitiseChanges(raw: unknown[]): { pattern: string; action: string }[] {
+  if (!Array.isArray(raw)) { return []; }
+  return raw.filter(
+    (c): c is { pattern: string; action: string } =>
+      !!c &&
+      typeof c === 'object' &&
+      typeof (c as { pattern?: unknown }).pattern === 'string' &&
+      typeof (c as { action?: unknown }).action === 'string'
+  );
 }
 
 export async function validateApiKey(apiKey: string): Promise<'valid' | 'invalid' | 'network-error'> {
   try {
+    const cfg = vscode.workspace.getConfiguration('deslop');
     const provider = getProviderConfig();
+    const model = cfg.get<string>('model', provider.defaultModel);
     const client = new OpenAI({
       apiKey,
       baseURL: provider.baseURL,
     });
     await client.chat.completions.create(
       {
-        model: provider.defaultModel,
-        max_tokens: 1,
+        model,
+        max_tokens: 16,
         messages: [{ role: 'user', content: 'hi' }],
       },
       { timeout: 10000 }
@@ -103,7 +119,7 @@ export async function validateApiKey(apiKey: string): Promise<'valid' | 'invalid
     return 'valid';
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes('401') || msg.includes('403') || msg.includes('invalid_api_key') || msg.includes('authentication')) {
+    if (/\b401\b/.test(msg) || /\b403\b/.test(msg) || msg.includes('invalid_api_key')) {
       return 'invalid';
     }
     return 'network-error';

@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { isCommentOrStringLine, isProseSelection, isCodeCommentSelection } from '../../util/isProseSelection';
-import { isSelectionTooLong, MAX_CHARS } from '../../api/providers';
+import { isCommentOrStringLine, isProseSelection, isCodeCommentSelection, nextBlockState, detectOpenBlockAbove } from '../../util/isProseSelection';
+import { isSelectionTooLong, MAX_CHARS, sanitiseChanges } from '../../api/providers';
 import { approximateWordCount } from '../../commands/humanize';
 import { MODIFIERS } from '../../prompts/modifiers';
 import { SYSTEM_PROMPT } from '../../prompts/system';
@@ -10,18 +10,19 @@ import { SYSTEM_PROMPT } from '../../prompts/system';
 // Minimal VS Code fakes for pure-function tests
 // ---------------------------------------------------------------------------
 
-function mockDoc(lines: string[], fileName = 'test.py'): vscode.TextDocument {
+function mockDoc(lines: string[], fileName = 'test.py', languageId = 'python'): vscode.TextDocument {
   return {
     fileName,
+    languageId,
     isUntitled: false,
     lineAt: (n: number) => ({ text: lines[n] }),
   } as unknown as vscode.TextDocument;
 }
 
-function mockSel(startLine: number, endLine: number): vscode.Selection {
+function mockSel(startLine: number, endLine: number, endCharacter = 0): vscode.Selection {
   return {
-    start: { line: startLine },
-    end: { line: endLine },
+    start: { line: startLine, character: 0 },
+    end: { line: endLine, character: endCharacter },
   } as unknown as vscode.Selection;
 }
 
@@ -119,8 +120,9 @@ suite('isProseSelection — block comment interiors', () => {
   });
 
   test('rejects mixed comment and code lines', async () => {
-    const doc = mockDoc(['# comment', 'const x = 1;'], 'index.ts');
-    assert.strictEqual(await isProseSelection(doc, mockSel(0, 1)), false);
+    const doc = mockDoc(['# comment', 'const x = 1;'], 'index.ts', 'typescript');
+    // endCharacter > 0 so the code line is included in the selection
+    assert.strictEqual(await isProseSelection(doc, mockSel(0, 1, 5)), false);
   });
 
   test('rejects selection with no prose lines (all empty)', async () => {
@@ -299,5 +301,252 @@ suite("MODIFIERS['Docstring/Comment'] — content assertions", () => {
       Object.keys(MODIFIERS),
       ['README', 'Docstring/Comment', 'Commit Message', 'Blog/Article']
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+suite('nextBlockState', () => {
+  test('opens """ block', () => {
+    assert.strictEqual(nextBlockState('"""hello', null), '"""');
+  });
+
+  test('opens and closes """ on the same line', () => {
+    assert.strictEqual(nextBlockState('"""hello"""', null), null);
+  });
+
+  test('closes existing """ block', () => {
+    assert.strictEqual(nextBlockState('end"""', '"""'), null);
+  });
+
+  test("opens ''' block", () => {
+    assert.strictEqual(nextBlockState("'''hello", null), "'''");
+  });
+
+  test("opens and closes ''' on the same line", () => {
+    assert.strictEqual(nextBlockState("'''hello'''", null), null);
+  });
+
+  test('asymmetric <# opens', () => {
+    assert.strictEqual(nextBlockState('<# foo', null), '<#');
+  });
+
+  test('asymmetric #> closes', () => {
+    assert.strictEqual(nextBlockState('bar #>', '<#'), null);
+  });
+
+  test('plain code line preserves null state', () => {
+    assert.strictEqual(nextBlockState('const x = 1;', null), null);
+  });
+
+  test('plain interior line preserves open block state', () => {
+    assert.strictEqual(nextBlockState('Interior prose line.', '"""'), '"""');
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+suite('detectOpenBlockAbove', () => {
+  test('returns null when no block is open above', () => {
+    const doc = mockDoc(['def f():', '    x = 1'], 'mod.py', 'python');
+    assert.strictEqual(detectOpenBlockAbove(doc, 0), null);
+  });
+
+  test('returns """ when block is open above selection', () => {
+    const doc = mockDoc([
+      'def f():',
+      '    """',
+      '    Interior line.',
+      '    """',
+    ], 'mod.py', 'python');
+    // startLine=2 — the opener is on line 1, not yet closed by line 2
+    assert.strictEqual(detectOpenBlockAbove(doc, 2), '"""');
+  });
+
+  test('returns null when block opened and closed above selection', () => {
+    const doc = mockDoc([
+      '"""',
+      'closed here"""',
+      'more code',
+    ], 'mod.py', 'python');
+    assert.strictEqual(detectOpenBlockAbove(doc, 2), null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+suite('isProseSelection — interior block detection (#4)', () => {
+  test('interior-only lines of an open """ docstring are prose', async () => {
+    const doc = mockDoc([
+      'def f():',
+      '    """',
+      '    Filters the list.',
+      '    Returns sorted results.',
+      '    """',
+      '    return sorted(x)',
+    ], 'mod.py', 'python');
+    const sel = mockSel(2, 3, 30);
+    assert.strictEqual(await isProseSelection(doc, sel), true);
+  });
+
+  test('interior of PowerShell <# ... #> block is prose', async () => {
+    const doc = mockDoc([
+      '<#',
+      '  Synopsis: does the thing.',
+      '#>',
+      'function Foo {}',
+    ], 'a.ps1', 'powershell');
+    const sel = mockSel(1, 1, 30);
+    assert.strictEqual(await isProseSelection(doc, sel), true);
+  });
+
+  test('same-line """foo""" does not leave block open for next line', async () => {
+    const doc = mockDoc([
+      '"""one-liner"""',
+      'code_line = 1',
+    ], 'mod.py', 'python');
+    const sel = mockSel(1, 1, 5);
+    assert.strictEqual(await isProseSelection(doc, sel), false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+suite('isProseSelection — end-at-col-0 boundary (#5)', () => {
+  test('selection ending at col 0 of next code line ignores that line', async () => {
+    const doc = mockDoc([
+      '// comment one',
+      '// comment two',
+      'const x = 1;',
+    ], 'a.ts', 'typescript');
+    const sel = mockSel(0, 2, 0);
+    assert.strictEqual(await isProseSelection(doc, sel), true);
+  });
+
+  test('selection ending mid-code-line still inspects that line', async () => {
+    const doc = mockDoc([
+      '// comment',
+      'const x = 1;',
+    ], 'a.ts', 'typescript');
+    const sel = mockSel(0, 1, 5);
+    assert.strictEqual(await isProseSelection(doc, sel), false);
+  });
+
+  test('single-line selection at col 0 is not adjusted (start===end)', async () => {
+    const doc = mockDoc(['// comment'], 'a.ts', 'typescript');
+    const sel = mockSel(0, 0, 0);
+    assert.strictEqual(await isProseSelection(doc, sel), true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+suite('isProseSelection — language-aware # (#6)', () => {
+  test('#include in a .c file is rejected', async () => {
+    const doc = mockDoc([
+      '#include <stdio.h>',
+      '#define SIZE 8',
+    ], 'main.c', 'c');
+    const sel = mockSel(0, 1, 10);
+    assert.strictEqual(await isProseSelection(doc, sel), false);
+  });
+
+  test('# comment in a Python file is accepted', async () => {
+    const doc = mockDoc([
+      '# a real comment',
+      '# another',
+    ], 'a.py', 'python');
+    const sel = mockSel(0, 1, 5);
+    assert.strictEqual(await isProseSelection(doc, sel), true);
+  });
+
+  test('#pragma in cpp is rejected', async () => {
+    const doc = mockDoc(['#pragma once'], 'a.cpp', 'cpp');
+    const sel = mockSel(0, 0, 5);
+    assert.strictEqual(await isProseSelection(doc, sel), false);
+  });
+
+  test('# in objective-c is rejected', async () => {
+    const doc = mockDoc(['#import <Foundation/Foundation.h>'], 'a.m', 'objective-c');
+    const sel = mockSel(0, 0, 5);
+    assert.strictEqual(await isProseSelection(doc, sel), false);
+  });
+
+  test('#if in csharp is rejected', async () => {
+    const doc = mockDoc(['#if DEBUG', '#endif'], 'a.cs', 'csharp');
+    const sel = mockSel(0, 1, 6);
+    assert.strictEqual(await isProseSelection(doc, sel), false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+suite('isCommentOrStringLine — language-aware # (#6)', () => {
+  test('# without languageId is accepted (backwards compat)', () => {
+    assert.strictEqual(isCommentOrStringLine('# comment'), true);
+  });
+
+  test('# with python languageId is accepted', () => {
+    assert.strictEqual(isCommentOrStringLine('# comment', 'python'), true);
+  });
+
+  test('# with c languageId is rejected', () => {
+    assert.strictEqual(isCommentOrStringLine('#include <stdio.h>', 'c'), false);
+  });
+
+  test('# with cpp languageId is rejected', () => {
+    assert.strictEqual(isCommentOrStringLine('#define MAX 9', 'cpp'), false);
+  });
+
+  test('# with ruby languageId is accepted', () => {
+    assert.strictEqual(isCommentOrStringLine('# ruby comment', 'ruby'), true);
+  });
+
+  test('# with shellscript languageId is accepted', () => {
+    assert.strictEqual(isCommentOrStringLine('# shell comment', 'shellscript'), true);
+  });
+
+  test('# with csharp languageId is rejected', () => {
+    assert.strictEqual(isCommentOrStringLine('#if DEBUG', 'csharp'), false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+suite('sanitiseChanges (#3)', () => {
+  test('drops null entries', () => {
+    assert.deepStrictEqual(sanitiseChanges([null]), []);
+  });
+
+  test('drops entries with non-string pattern', () => {
+    assert.deepStrictEqual(sanitiseChanges([{ pattern: 1, action: 'x' }]), []);
+  });
+
+  test('drops entries missing action', () => {
+    assert.deepStrictEqual(sanitiseChanges([{ pattern: 'p' }]), []);
+  });
+
+  test('keeps well-formed entries', () => {
+    const ok = [{ pattern: 'p', action: 'a' }];
+    assert.deepStrictEqual(sanitiseChanges(ok), ok);
+  });
+
+  test('mixed input keeps only valid entries', () => {
+    const result = sanitiseChanges([
+      null,
+      { pattern: 'p', action: 'a' },
+      { pattern: 1 },
+      'string',
+      { pattern: 'q', action: 'b' },
+    ]);
+    assert.deepStrictEqual(result, [
+      { pattern: 'p', action: 'a' },
+      { pattern: 'q', action: 'b' },
+    ]);
+  });
+
+  test('returns [] for non-array input', () => {
+    assert.deepStrictEqual(sanitiseChanges(null as unknown as unknown[]), []);
+    assert.deepStrictEqual(sanitiseChanges({} as unknown as unknown[]), []);
   });
 });
