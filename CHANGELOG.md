@@ -1,6 +1,14 @@
 # Changelog
 
-## v0.1.5 -- unreleased
+## v0.1.6 -- 2026-06-08
+
+**Rewrites are stricter about preserving meaning.** The editor prompt now gives the model clearer instructions: improve the prose, keep the writer's useful voice, preserve facts, and avoid inventing evidence just to make text sound stronger.
+
+**Protected regions are verified after the model responds.** DeSlop now checks that triple-backtick code fences, inline backtick spans, and YAML/TOML frontmatter from the original selection still appear unchanged in the rewrite. If the model edits protected content, the rewrite fails instead of corrupting examples, commands, or metadata.
+
+---
+
+## v0.1.5 -- 2026-05-18
 
 This one started as a security review and turned into a release-hardening pass.
 

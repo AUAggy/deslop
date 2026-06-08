@@ -4,6 +4,7 @@ src/**
 out/**
 node_modules/**
 .gitignore
+AGENTS.md
 .yarnrc
 vsc-extension-quickstart.md
 **/tsconfig.json

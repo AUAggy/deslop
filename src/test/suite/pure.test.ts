@@ -5,6 +5,7 @@ import { isSelectionTooLong, MAX_CHARS, sanitiseChanges } from '../../api/provid
 import { approximateWordCount } from '../../commands/humanize';
 import { MODIFIERS } from '../../prompts/modifiers';
 import { SYSTEM_PROMPT } from '../../prompts/system';
+import { collectProtectedRegions, verifyProtectedRegions } from '../../util/postCheck';
 
 // ---------------------------------------------------------------------------
 // Minimal VS Code fakes for pure-function tests
@@ -247,11 +248,65 @@ suite('SYSTEM_PROMPT — code region preservation rule', () => {
   });
 
   test('preservation rule appears before STYLE RULES section', () => {
-    const codeRegionIdx = SYSTEM_PROMPT.indexOf('CODE REGION');
+    const protectedIdx = SYSTEM_PROMPT.indexOf('PROTECTED REGIONS');
     const styleRulesIdx = SYSTEM_PROMPT.indexOf('STYLE RULES');
-    assert.ok(codeRegionIdx !== -1, 'CODE REGION section not found');
+    assert.ok(protectedIdx !== -1, 'PROTECTED REGIONS section not found');
     assert.ok(styleRulesIdx !== -1, 'STYLE RULES section not found');
-    assert.ok(codeRegionIdx < styleRulesIdx, 'CODE REGION should appear before STYLE RULES');
+    assert.ok(protectedIdx < styleRulesIdx, 'PROTECTED REGIONS should appear before STYLE RULES');
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+suite('postCheck — protected region verification', () => {
+  test('passes when code fence is unchanged and prose changes', () => {
+    const original = 'Use this:\n```ts\nconst x = leverage(foo);\n```\nThat is seamless.';
+    const rewritten = 'Use this command:\n```ts\nconst x = leverage(foo);\n```\nThat is direct.';
+    assert.deepStrictEqual(verifyProtectedRegions(original, rewritten), []);
+  });
+
+  test('fails when code fence content changes', () => {
+    const original = '```ts\nconst x = leverage(foo);\n```';
+    const rewritten = '```ts\nconst x = use(foo);\n```';
+    assert.deepStrictEqual(verifyProtectedRegions(original, rewritten), ['code fence changed or missing']);
+  });
+
+  test('passes when inline code is unchanged', () => {
+    const original = 'Run `npm run compile` before packaging.';
+    const rewritten = 'Run `npm run compile` before you package the extension.';
+    assert.deepStrictEqual(verifyProtectedRegions(original, rewritten), []);
+  });
+
+  test('fails when inline code changes', () => {
+    const original = 'Run `npm run compile` before packaging.';
+    const rewritten = 'Run `npm run build` before packaging.';
+    assert.deepStrictEqual(verifyProtectedRegions(original, rewritten), ['inline code changed or missing']);
+  });
+
+  test('passes when frontmatter is unchanged', () => {
+    const original = '---\ntitle: My Post\n---\nThis post will explore the topic.';
+    const rewritten = '---\ntitle: My Post\n---\nThis post explains the topic.';
+    assert.deepStrictEqual(verifyProtectedRegions(original, rewritten), []);
+  });
+
+  test('fails when frontmatter changes', () => {
+    const original = '---\ntitle: My Post\n---\nBody.';
+    const rewritten = '---\ntitle: Better Post\n---\nBody.';
+    assert.deepStrictEqual(verifyProtectedRegions(original, rewritten), ['frontmatter changed or missing']);
+  });
+
+  test('tracks duplicate protected regions by count', () => {
+    const original = 'Run `npm test`, then run `npm test` again.';
+    const rewritten = 'Run `npm test`, then run `npm run test` again.';
+    assert.deepStrictEqual(verifyProtectedRegions(original, rewritten), ['inline code changed or missing']);
+  });
+
+  test('collects frontmatter, code fences, and inline code', () => {
+    const regions = collectProtectedRegions('---\ntitle: T\n---\nUse `x`.\n```js\nx();\n```');
+    assert.deepStrictEqual(
+      regions.map((r) => r.kind),
+      ['frontmatter', 'code fence', 'inline code']
+    );
   });
 });
 

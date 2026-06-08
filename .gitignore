@@ -4,7 +4,9 @@ node_modules/
 .vscode-test/
 *.vsix
 docs/
+plans/
 CLAUDE.md
+AGENTS.md
 .DS_Store
 .deepsec/
 .vscode/settings.json

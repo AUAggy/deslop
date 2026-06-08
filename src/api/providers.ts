@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import * as vscode from 'vscode';
 import { SYSTEM_PROMPT } from '../prompts/system';
 import { MODIFIERS } from '../prompts/modifiers';
+import { verifyProtectedRegions } from '../util/postCheck';
 import type { DocumentType, HumanizeResponse } from '../types';
 
 export const MAX_CHARS = 4000 * 4; // ~4000 tokens at ~4 chars/token
@@ -84,6 +85,11 @@ export async function callHumanize(
   }
 
   parsed.changes = sanitiseChanges(parsed.changes);
+
+  const protectedIssues = verifyProtectedRegions(text, parsed.rewritten);
+  if (protectedIssues.length > 0) {
+    throw new Error(`Rewrite changed protected content: ${protectedIssues[0]}`);
+  }
 
   return parsed;
 }
