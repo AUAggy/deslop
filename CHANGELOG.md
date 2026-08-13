@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.7 -- 2026-08-13
+
+**Rewrites can no longer carry invisible characters into your document.** After the model responds, DeSlop strips invisible Unicode (zero-width characters, bidi controls, tag characters, soft hyphens) and normalises exotic spaces and look-alike punctuation (e.g. the U+02BC apostrophe) to their plain equivalents — outside code fences, inline code, and frontmatter, which stay byte-exact. Curly quotes and em/en dashes are legitimate typography and are never touched. The strip is absolute: characters already present in your selection are cleared too. Anything stripped is reported in the changes panel; nothing happens silently.
+
+**README now states the data flow plainly.** What leaves your machine (the selection and the system prompt, to your chosen provider over HTTPS), what does not (no telemetry, no analytics, no update pings), and where API keys live (VS Code SecretStorage).
+
+**Dev-only: test harness updated.** `@vscode/test-cli` and `@vscode/test-electron` were bumped so the suite runs against current VS Code builds. No runtime dependencies changed.
+
+---
+
 ## v0.1.6 -- 2026-06-08
 
 **Rewrites are stricter about preserving meaning.** The editor prompt now gives the model clearer instructions: improve the prose, keep the writer's useful voice, preserve facts, and avoid inventing evidence just to make text sound stronger.

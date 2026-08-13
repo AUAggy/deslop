@@ -140,6 +140,12 @@ Text submitted for rewriting goes to your chosen provider under your own API key
 
 The API key lives in your OS keychain. It does not appear in `settings.json`, logs, or anywhere a grep would find it.
 
+**What leaves your machine.** The selected text and DeSlop's system prompt, sent over HTTPS to the provider you configured (OpenRouter or Venice). The provider — and any gateway between you and it — sees the full selection. Do not deslop text you would not send to that provider.
+
+**What does not leave.** Nothing else. No telemetry, no analytics, no update pings. The only network calls this extension makes are the rewrite request and API key validation. API keys are stored in VS Code SecretStorage; the extension never writes them to disk in plaintext.
+
+DeSlop rewrites prose; it does not audit documents for hidden provenance marks. If you need that, dedicated open-source tools exist — for example markscrub or watermarks-remover.
+
 ---
 
 ## Limitations
