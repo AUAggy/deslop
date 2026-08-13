@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import * as vscode from 'vscode';
 import { SYSTEM_PROMPT } from '../prompts/system';
 import { MODIFIERS } from '../prompts/modifiers';
-import { verifyProtectedRegions } from '../util/postCheck';
+import { verifyProtectedRegions, stripInvisible } from '../util/postCheck';
 import type { DocumentType, HumanizeResponse } from '../types';
 
 export const MAX_CHARS = 4000 * 4; // ~4000 tokens at ~4 chars/token
@@ -90,6 +90,26 @@ export async function callHumanize(
   if (protectedIssues.length > 0) {
     throw new Error(`Rewrite changed protected content: ${protectedIssues[0]}`);
   }
+
+  // Output integrity guard: strip invisible Unicode and normalise confusable
+  // punctuation outside protected regions. Absolute, not a diff -- marks
+  // already present in the user's selection are cleared too. Runs after
+  // verifyProtectedRegions so tamper detection sees unmodified model output.
+  // Never strips silently: change entries are appended in code, not by the model.
+  const stripped = stripInvisible(parsed.rewritten);
+  if (stripped.invisibleCount > 0) {
+    parsed.changes.push({
+      pattern: 'invisible characters',
+      action: `Removed or normalised ${stripped.invisibleCount} invisible character(s) in the rewrite.`,
+    });
+  }
+  if (stripped.confusableCount > 0) {
+    parsed.changes.push({
+      pattern: 'confusable punctuation',
+      action: `Normalised ${stripped.confusableCount} look-alike punctuation character(s) to ASCII.`,
+    });
+  }
+  parsed.rewritten = stripped.text;
 
   return parsed;
 }

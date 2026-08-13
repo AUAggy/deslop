@@ -5,7 +5,7 @@ import { isSelectionTooLong, MAX_CHARS, sanitiseChanges } from '../../api/provid
 import { approximateWordCount } from '../../commands/humanize';
 import { MODIFIERS } from '../../prompts/modifiers';
 import { SYSTEM_PROMPT } from '../../prompts/system';
-import { collectProtectedRegions, verifyProtectedRegions } from '../../util/postCheck';
+import { collectProtectedRegions, verifyProtectedRegions, stripInvisible } from '../../util/postCheck';
 
 // ---------------------------------------------------------------------------
 // Minimal VS Code fakes for pure-function tests
@@ -603,5 +603,67 @@ suite('sanitiseChanges (#3)', () => {
   test('returns [] for non-array input', () => {
     assert.deepStrictEqual(sanitiseChanges(null as unknown as unknown[]), []);
     assert.deepStrictEqual(sanitiseChanges({} as unknown as unknown[]), []);
+  });
+});
+
+suite('stripInvisible (output integrity guard)', () => {
+  test('clean rewrite passes through unchanged', () => {
+    // Em dash and curly quotes are legitimate typography -- untouched.
+    const text = 'Plain prose with an em dash \u2014 and \u201Ccurly quotes\u201D untouched.';
+    const result = stripInvisible(text);
+    assert.strictEqual(result.text, text);
+    assert.strictEqual(result.invisibleCount, 0);
+    assert.strictEqual(result.confusableCount, 0);
+  });
+
+  test('ZWSP, bidi, and tag characters are stripped and counted', () => {
+    const text = 'He\u200Bllo \u202Eworld\u202C and\u{E0041}\u{E007F} done';
+    const result = stripInvisible(text);
+    assert.strictEqual(result.text, 'Hello world and done');
+    assert.strictEqual(result.invisibleCount, 5);
+    assert.strictEqual(result.confusableCount, 0);
+  });
+
+  test('exotic space becomes a normal space; words do not fuse', () => {
+    const result = stripInvisible('10\u00A0km and wide\u3000gap');
+    assert.strictEqual(result.text, '10 km and wide gap');
+    assert.strictEqual(result.invisibleCount, 2);
+  });
+
+  test('line and paragraph separators become newlines', () => {
+    const result = stripInvisible('one\u2028two\u2029three');
+    assert.strictEqual(result.text, 'one\ntwo\nthree');
+    assert.strictEqual(result.invisibleCount, 2);
+  });
+
+  test('invisible character inside a code fence is preserved', () => {
+    const text = 'Before\n```\ncode\u200Bwith zwsp\n```\nAfter\u200B end';
+    const result = stripInvisible(text);
+    assert.strictEqual(result.text, 'Before\n```\ncode\u200Bwith zwsp\n```\nAfter end');
+    assert.strictEqual(result.invisibleCount, 1);
+  });
+
+  test('mixed: only invisible chars outside protected regions are stripped', () => {
+    const text = 'A\u200B `in\u00ADline` B\uFEFFC\n```js\nx\u200B = 1\n```\nD\u200BE';
+    const result = stripInvisible(text);
+    assert.strictEqual(result.text, 'A `in\u00ADline` BC\n```js\nx\u200B = 1\n```\nDE');
+    assert.strictEqual(result.invisibleCount, 3);
+  });
+
+  test('confusable apostrophe becomes ASCII; curly quote is untouched', () => {
+    // U+02BC apostrophe and U+2010 hyphen normalise; U+2019 curly quote stays.
+    const result = stripInvisible('It\u02BCs a \u2019real\u2019 test with a \u2010hyphen');
+    assert.strictEqual(result.text, "It's a \u2019real\u2019 test with a -hyphen");
+    assert.strictEqual(result.confusableCount, 2);
+    assert.strictEqual(result.invisibleCount, 0);
+  });
+
+  test('marks already present in the original are cleared too (absolute strip)', () => {
+    // Simulates a mark that rode in with the user's selection and survived the
+    // rewrite verbatim: the guard strips it regardless of provenance.
+    const carriedThrough = 'The plan\u200B remains\u00ADunchanged.';
+    const result = stripInvisible(carriedThrough);
+    assert.strictEqual(result.text, 'The plan remainsunchanged.');
+    assert.strictEqual(result.invisibleCount, 2);
   });
 });
