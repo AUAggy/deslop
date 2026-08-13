@@ -2,11 +2,13 @@
 
 ## v0.1.7 -- 2026-08-13
 
-**Rewrites can no longer carry invisible characters into your document.** After the model responds, DeSlop strips invisible Unicode (zero-width characters, bidi controls, tag characters, soft hyphens) and normalises exotic spaces and look-alike punctuation (e.g. the U+02BC apostrophe) to their plain equivalents — outside code fences, inline code, and frontmatter, which stay byte-exact. Curly quotes and em/en dashes are legitimate typography and are never touched. The strip is absolute: characters already present in your selection are cleared too. Anything stripped is reported in the changes panel; nothing happens silently.
+**Rewrites can no longer carry invisible characters into your document.** After the model responds, DeSlop deletes zero-width characters, bidi controls, tag characters, and soft hyphens. It replaces exotic spaces with normal spaces and converts look-alike punctuation, such as the U+02BC apostrophe, to plain ASCII. Code fences, inline code, and frontmatter stay byte-exact. Curly quotes and em/en dashes are legitimate typography and are left alone. The check removes marks that were already in your selection as well as any the model introduced. Everything stripped is listed in the changes panel; nothing is removed silently.
 
-**README now states the data flow plainly.** What leaves your machine (the selection and the system prompt, to your chosen provider over HTTPS), what does not (no telemetry, no analytics, no update pings), and where API keys live (VS Code SecretStorage).
+**The default model is now `deepseek/deepseek-v4-flash-0731`** on OpenRouter and `deepseek-v4-flash-0731-fast` on Venice. If you set `deslop.model` yourself, your setting still applies.
 
-**Dev-only: test harness updated.** `@vscode/test-cli` and `@vscode/test-electron` were bumped so the suite runs against current VS Code builds. No runtime dependencies changed.
+**The README now states the data flow.** What leaves your machine: the selected text and the system prompt, sent over HTTPS to your chosen provider. What does not: no telemetry, no analytics, no update pings. API keys stay in VS Code SecretStorage.
+
+**Test harness updated (dev only).** `@vscode/test-cli` and `@vscode/test-electron` now match current VS Code builds. Runtime dependencies are unchanged.
 
 ---
 

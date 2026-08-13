@@ -123,14 +123,14 @@ Available in the command palette and the editor right-click context menu when te
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `deslop.provider` | enum | `openrouter` | `openrouter` or `venice` |
-| `deslop.model` | string | `deepseek/deepseek-v4-flash` | Model ID for the selected provider |
+| `deslop.model` | string | `deepseek/deepseek-v4-flash-0731` | Model ID for the selected provider |
 | `deslop.defaultDocumentType` | enum | `null` | Pre-select doc type; null means always prompt |
 | `deslop.showChangeLog` | boolean | `true` | Show changes panel after each accepted rewrite. User-scope only. |
 | `deslop.autoAccept` | boolean | `false` | Skip diff view and apply immediately. User-scope only. |
 
 **Model IDs by provider:**
-- OpenRouter: `deepseek/deepseek-v4-flash`, `anthropic/claude-sonnet-4.6`, `openai/gpt-5.5`, and [hundreds more](https://openrouter.ai/models)
-- Venice: `deepseek-v4-flash`, `claude-sonnet-4-6`, `kimi-k2-6`, and [more](https://docs.venice.ai/models/overview)
+- OpenRouter: `deepseek/deepseek-v4-flash-0731`, `anthropic/claude-sonnet-5`, `openai/gpt-5.6-sol`, and [hundreds more](https://openrouter.ai/models)
+- Venice: `deepseek-v4-flash-0731-fast`, `claude-sonnet-5`, `kimi-k3-fast-api`, and [more](https://docs.venice.ai/models/overview)
 
 ---
 
@@ -140,11 +140,11 @@ Text submitted for rewriting goes to your chosen provider under your own API key
 
 The API key lives in your OS keychain. It does not appear in `settings.json`, logs, or anywhere a grep would find it.
 
-**What leaves your machine.** The selected text and DeSlop's system prompt, sent over HTTPS to the provider you configured (OpenRouter or Venice). The provider — and any gateway between you and it — sees the full selection. Do not deslop text you would not send to that provider.
+**What leaves your machine.** The selected text and DeSlop's system prompt, sent over HTTPS to the provider you configured (OpenRouter or Venice). The provider -- and any gateway between you and it -- sees the full selection. Do not deslop text you would not send to that provider.
 
 **What does not leave.** Nothing else. No telemetry, no analytics, no update pings. The only network calls this extension makes are the rewrite request and API key validation. API keys are stored in VS Code SecretStorage; the extension never writes them to disk in plaintext.
 
-DeSlop rewrites prose; it does not audit documents for hidden provenance marks. If you need that, dedicated open-source tools exist — for example markscrub or watermarks-remover.
+DeSlop rewrites prose; it does not audit documents for hidden provenance marks. If you need that, dedicated open-source tools exist, for example markscrub or watermarks-remover.
 
 ---
 
