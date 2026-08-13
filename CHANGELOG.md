@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.7 -- 2026-08-13
+
+**Rewrites can no longer carry invisible characters into your document.** After the model responds, DeSlop deletes zero-width characters, bidi controls, tag characters, and soft hyphens. It replaces exotic spaces with normal spaces and converts look-alike punctuation, such as the U+02BC apostrophe, to plain ASCII. Code fences, inline code, and frontmatter stay byte-exact. Curly quotes and em/en dashes are legitimate typography and are left alone. The check removes marks that were already in your selection as well as any the model introduced. Everything stripped is listed in the changes panel; nothing is removed silently.
+
+**The default model is now `deepseek/deepseek-v4-flash-0731`** on OpenRouter and `deepseek-v4-flash-0731-fast` on Venice. If you set `deslop.model` yourself, your setting still applies.
+
+**The README now states the data flow.** What leaves your machine: the selected text and the system prompt, sent over HTTPS to your chosen provider. What does not: no telemetry, no analytics, no update pings. API keys stay in VS Code SecretStorage.
+
+**Test harness updated (dev only).** `@vscode/test-cli` and `@vscode/test-electron` now match current VS Code builds. Runtime dependencies are unchanged.
+
+---
+
 ## v0.1.6 -- 2026-06-08
 
 **Rewrites are stricter about preserving meaning.** The editor prompt now gives the model clearer instructions: improve the prose, keep the writer's useful voice, preserve facts, and avoid inventing evidence just to make text sound stronger.

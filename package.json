@@ -2,7 +2,7 @@
   "name": "deslop",
   "displayName": "DeSlop - AI Slop Remover",
   "description": "Rewrites AI-generated prose into clear technical writing. Removes slop vocabulary, padding phrases, decorative emojis, and cliche structures from READMEs, docstrings, commit messages, and blog posts. Works with OpenRouter and Venice.ai. Any model, your API key.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "publisher": "AUAggy",
   "repository": {
     "type": "git",
@@ -91,12 +91,12 @@
             "venice"
           ],
           "default": "openrouter",
-          "description": "AI provider. openrouter: uses openrouter.ai (default model: deepseek/deepseek-v4-flash). venice: uses venice.ai (default model: deepseek-v4-flash). Each provider requires its own API key."
+          "description": "AI provider. openrouter: uses openrouter.ai (default model: deepseek/deepseek-v4-flash-0731). venice: uses venice.ai (default model: deepseek-v4-flash-0731-fast). Each provider requires its own API key."
         },
         "deslop.model": {
           "type": "string",
-          "default": "deepseek/deepseek-v4-flash",
-          "description": "Model ID for the selected provider. OpenRouter: deepseek/deepseek-v4-flash, anthropic/claude-sonnet-4-5, etc. Venice: deepseek-v4-flash, llama-3.3-70b, etc."
+          "default": "deepseek/deepseek-v4-flash-0731",
+          "description": "Model ID for the selected provider. OpenRouter: deepseek/deepseek-v4-flash-0731, anthropic/claude-sonnet-5, etc. Venice: deepseek-v4-flash-0731-fast, claude-sonnet-5, etc."
         },
         "deslop.defaultDocumentType": {
           "type": [
@@ -141,8 +141,8 @@
     "@types/vscode": "^1.110.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.3.8",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
     "esbuild": "^0.28.0",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3"
