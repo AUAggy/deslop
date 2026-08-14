@@ -133,7 +133,8 @@
     "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext .ts",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "posttest": "sh scripts/unregister-vscode-test.sh"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",

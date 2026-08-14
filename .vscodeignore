@@ -19,3 +19,4 @@ CODE-DESLOP-ANALYSIS.md
 .deepsec/**
 pnpm-lock.yaml
 pnpm-workspace.yaml
+scripts/**
