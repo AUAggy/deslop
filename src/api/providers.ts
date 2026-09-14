@@ -11,7 +11,7 @@ export const HUMANIZE_TIMEOUT_MS = 90000;
 const PROVIDER_CONFIG = {
   openrouter: {
     baseURL: 'https://openrouter.ai/api/v1',
-    defaultModel: 'deepseek/deepseek-v4-flash-0731',
+    defaultModel: 'openai/gpt-5.6-luna',
     defaultHeaders: {
       'HTTP-Referer': 'https://github.com/AUAggy/deslop',
       'X-Title': 'DeSlop',
@@ -19,7 +19,7 @@ const PROVIDER_CONFIG = {
   },
   venice: {
     baseURL: 'https://api.venice.ai/api/v1',
-    defaultModel: 'deepseek-v4-flash-0731-fast',
+    defaultModel: 'openai-gpt-56-luna',
     defaultHeaders: {},
   },
 } as const;

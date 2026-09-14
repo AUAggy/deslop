@@ -123,14 +123,14 @@ Available in the command palette and the editor right-click context menu when te
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `deslop.provider` | enum | `openrouter` | `openrouter` or `venice` |
-| `deslop.model` | string | `deepseek/deepseek-v4-flash-0731` | Model ID for the selected provider |
+| `deslop.model` | string | `openai/gpt-5.6-luna` | Model ID for the selected provider |
 | `deslop.defaultDocumentType` | enum | `null` | Pre-select doc type; null means always prompt |
 | `deslop.showChangeLog` | boolean | `true` | Show changes panel after each accepted rewrite. User-scope only. |
 | `deslop.autoAccept` | boolean | `false` | Skip diff view and apply immediately. User-scope only. |
 
 **Model IDs by provider:**
-- OpenRouter: `deepseek/deepseek-v4-flash-0731`, `anthropic/claude-sonnet-5`, `openai/gpt-5.6-sol`, and [hundreds more](https://openrouter.ai/models)
-- Venice: `deepseek-v4-flash-0731-fast`, `claude-sonnet-5`, `kimi-k3-fast-api`, and [more](https://docs.venice.ai/models/overview)
+- OpenRouter: `openai/gpt-5.6-luna`, `deepseek/deepseek-v4-flash-0731`, `anthropic/claude-sonnet-5`, and [hundreds more](https://openrouter.ai/models)
+- Venice: `openai-gpt-56-luna`, `deepseek-v4-flash-0731-fast`, `claude-sonnet-5`, and [more](https://docs.venice.ai/models/overview)
 
 ---
 

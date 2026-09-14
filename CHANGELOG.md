@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+**The default model is now `openai/gpt-5.6-luna`** on OpenRouter and `openai-gpt-56-luna` on Venice. Same fast-tier pricing class as the previous DeepSeek flash default, with a full rewrite costing a fraction of a cent. If you set `deslop.model` yourself, your setting still applies.
+
+**The editor prompt is sharper and slightly smaller.** A new intent section tells the model what machine texture it is removing and warns against flattening distinctive human writing into sterile minimalism. The pattern catalog gained four entries from editorial review: rhetorical question openers, self-answered questions, inclusive sweeps ("Whether you're a beginner or an expert..."), and wrap-up phrases ("in conclusion", "to summarize"). `state-of-the-art` is now flagged as a collocation ("state-of-the-art solution") instead of a blanket word ban, so accurate benchmark language survives. Redundant internal bookkeeping sections were cut; verification gates dropped from ten to five.
+
 ## v0.1.7 -- 2026-08-13
 
 **Rewrites can no longer carry invisible characters into your document.** After the model responds, DeSlop deletes zero-width characters, bidi controls, tag characters, and soft hyphens. It replaces exotic spaces with normal spaces and converts look-alike punctuation, such as the U+02BC apostrophe, to plain ASCII. Code fences, inline code, and frontmatter stay byte-exact. Curly quotes and em/en dashes are legitimate typography and are left alone. The check removes marks that were already in your selection as well as any the model introduced. Everything stripped is listed in the changes panel; nothing is removed silently.
