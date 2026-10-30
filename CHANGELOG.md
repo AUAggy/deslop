@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased
+## v0.1.8 -- 2026-10-30
 
-**The default model is now GPT-6 Luna:** `openai/gpt-6-luna` on OpenRouter and `openai-gpt-6-luna` on Venice. If you set `deslop.model` yourself, your setting still applies. When the setting is unset, DeSlop uses the selected provider's model ID for rewrites and API-key validation.
+**The default model is now GPT-6 Luna:** `openai/gpt-6-luna` on OpenRouter and `openai-gpt-6-luna` on Venice. If you set `deslop.model`, your value still applies. When it is unset, DeSlop uses the model ID of the provider you selected, for both rewrites and API-key validation. Before this, an unset model fell back to one global default, so a Venice key could be tested against an OpenRouter model ID.
 
-**The editor prompt is sharper.** A new intent section tells the model what machine texture it is removing and warns against flattening distinctive human writing into sterile minimalism. The pattern catalog gained four entries from editorial review: rhetorical question openers, self-answered questions, inclusive sweeps ("Whether you're a beginner or an expert..."), and wrap-up phrases ("in conclusion", "to summarize"). `state-of-the-art` is now flagged as a collocation ("state-of-the-art solution") instead of a blanket word ban, so accurate benchmark language survives. Redundant internal bookkeeping sections were cut; verification gates dropped from ten to five.
+**The editing prompt names the patterns it removes.** It opens by describing the templates that make text read as machine-written: the antithesis flip, the rule of three, the fake open-ended closer, and the hype opener. The pattern catalog gained rhetorical-question openers, self-answered questions, and wrap-up phrases such as "in conclusion" and "to summarize". Inclusive sweeps ("Whether you're a beginner or an expert...") are flagged only when they carry no information, so a genuine audience fork survives. `state-of-the-art` is banned only as a collocation ("state-of-the-art solution"), which leaves accurate benchmark language alone. Bookkeeping the model never reported was removed, and the verification gates dropped from ten to five.
 
 ## v0.1.7 -- 2026-08-13
 
