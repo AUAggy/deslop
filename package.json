@@ -91,12 +91,12 @@
             "venice"
           ],
           "default": "openrouter",
-          "description": "AI provider. openrouter: uses openrouter.ai (default model: openai/gpt-5.6-luna). venice: uses venice.ai (default model: openai-gpt-56-luna). Each provider requires its own API key."
+          "description": "AI provider. openrouter: uses openrouter.ai (default model: openai/gpt-6-luna). venice: uses venice.ai (default model: openai-gpt-6-luna). Each provider requires its own API key."
         },
         "deslop.model": {
           "type": "string",
-          "default": "openai/gpt-5.6-luna",
-          "description": "Model ID for the selected provider. OpenRouter: openai/gpt-5.6-luna, anthropic/claude-sonnet-5, etc. Venice: openai-gpt-56-luna, claude-sonnet-5, etc."
+          "default": "openai/gpt-6-luna",
+          "description": "Model ID for the selected provider. When unset, uses openai/gpt-6-luna on OpenRouter or openai-gpt-6-luna on Venice. Explicit model settings take precedence."
         },
         "deslop.defaultDocumentType": {
           "type": [

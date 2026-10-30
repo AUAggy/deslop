@@ -11,7 +11,7 @@ export const HUMANIZE_TIMEOUT_MS = 90000;
 const PROVIDER_CONFIG = {
   openrouter: {
     baseURL: 'https://openrouter.ai/api/v1',
-    defaultModel: 'openai/gpt-5.6-luna',
+    defaultModel: 'openai/gpt-6-luna',
     defaultHeaders: {
       'HTTP-Referer': 'https://github.com/AUAggy/deslop',
       'X-Title': 'DeSlop',
@@ -19,7 +19,7 @@ const PROVIDER_CONFIG = {
   },
   venice: {
     baseURL: 'https://api.venice.ai/api/v1',
-    defaultModel: 'openai-gpt-56-luna',
+    defaultModel: 'openai-gpt-6-luna',
     defaultHeaders: {},
   },
 } as const;
@@ -30,6 +30,19 @@ function getProviderConfig(): (typeof PROVIDER_CONFIG)[Provider] {
   const cfg = vscode.workspace.getConfiguration('deslop');
   const p = cfg.get<string>('provider', 'openrouter');
   return p === 'venice' ? PROVIDER_CONFIG.venice : PROVIDER_CONFIG.openrouter;
+}
+
+export function resolveModel(cfg: vscode.WorkspaceConfiguration, defaultModel: string): string {
+  const setting = cfg.inspect<string>('model');
+  const hasOverride = setting && [
+    setting.globalValue,
+    setting.workspaceValue,
+    setting.workspaceFolderValue,
+    setting.globalLanguageValue,
+    setting.workspaceLanguageValue,
+    setting.workspaceFolderLanguageValue,
+  ].some(value => value !== undefined);
+  return hasOverride ? cfg.get<string>('model', defaultModel) : defaultModel;
 }
 
 export function isSelectionTooLong(text: string): boolean {
@@ -43,7 +56,7 @@ export async function callHumanize(
 ): Promise<HumanizeResponse> {
   const cfg = vscode.workspace.getConfiguration('deslop');
   const provider = getProviderConfig();
-  const model = cfg.get<string>('model', provider.defaultModel);
+  const model = resolveModel(cfg, provider.defaultModel);
 
   const client = new OpenAI({
     apiKey,
@@ -129,7 +142,7 @@ export async function validateApiKey(apiKey: string): Promise<'valid' | 'invalid
   try {
     const cfg = vscode.workspace.getConfiguration('deslop');
     const provider = getProviderConfig();
-    const model = cfg.get<string>('model', provider.defaultModel);
+    const model = resolveModel(cfg, provider.defaultModel);
     const client = new OpenAI({
       apiKey,
       baseURL: provider.baseURL,
