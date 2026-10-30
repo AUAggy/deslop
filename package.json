@@ -91,12 +91,12 @@
             "venice"
           ],
           "default": "openrouter",
-          "description": "AI provider. openrouter: uses openrouter.ai (default model: deepseek/deepseek-v4-flash-0731). venice: uses venice.ai (default model: deepseek-v4-flash-0731-fast). Each provider requires its own API key."
+          "description": "AI provider. openrouter: uses openrouter.ai (default model: openai/gpt-6-luna). venice: uses venice.ai (default model: openai-gpt-6-luna). Each provider requires its own API key."
         },
         "deslop.model": {
           "type": "string",
-          "default": "deepseek/deepseek-v4-flash-0731",
-          "description": "Model ID for the selected provider. OpenRouter: deepseek/deepseek-v4-flash-0731, anthropic/claude-sonnet-5, etc. Venice: deepseek-v4-flash-0731-fast, claude-sonnet-5, etc."
+          "default": "openai/gpt-6-luna",
+          "description": "Model ID for the selected provider. When unset, uses openai/gpt-6-luna on OpenRouter or openai-gpt-6-luna on Venice. Explicit model settings take precedence."
         },
         "deslop.defaultDocumentType": {
           "type": [
