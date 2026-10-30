@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.8 -- 2026-10-30
+## v0.1.9 -- 2026-10-30
 
 **The default model is now GPT-6 Luna:** `openai/gpt-6-luna` on OpenRouter and `openai-gpt-6-luna` on Venice. If you set `deslop.model`, your value still applies. When it is unset, DeSlop uses the model ID of the provider you selected, for both rewrites and API-key validation. Before this, an unset model fell back to one global default, so a Venice key could be tested against an OpenRouter model ID.
 
