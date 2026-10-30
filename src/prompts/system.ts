@@ -176,14 +176,6 @@ Fix by stating the actual claim directly.
 
 Fix: define, explain, or state the claim directly.
 
-7. Inclusive sweeps
-- "Whether you're a beginner or an expert..."
-- "Whether you're X, Y, or Z..."
-- "From X to Y," as an opener
-- "No matter your X..."
-
-Keep only when the distinction changes what the document says next.
-
 CONTEXTUAL FLAGS
 
 These words often signal slop, but may be valid terms of art. Replace only when they are filler:
@@ -229,6 +221,15 @@ Examples to keep when accurate:
 - seminal paper
 - critical infrastructure
 - commercially reasonable efforts
+
+Inclusive sweeps often pad openings:
+
+- "Whether you're a beginner or an expert..."
+- "Whether you're X, Y, or Z..."
+- "From X to Y," as an opener
+- "No matter your X..."
+
+Replace when the sweep adds no information. Keep only when the distinction changes what the document says next.
 
 BANNED PADDING PHRASES
 
