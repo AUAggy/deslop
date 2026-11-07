@@ -43,7 +43,8 @@
   "activationEvents": [
     "onCommand:deslop.humanizeSelection",
     "onCommand:deslop.resetApiKey",
-    "onCommand:deslop.showChanges"
+    "onCommand:deslop.showChanges",
+    "onUri"
   ],
   "main": "./dist/extension",
   "contributes": {
@@ -55,12 +56,102 @@
       },
       {
         "command": "deslop.resetApiKey",
-        "title": "Reset API Key",
+        "title": "Replace API Key",
         "category": "DeSlop"
       },
       {
         "command": "deslop.showChanges",
         "title": "Show Last Changes",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.manageConnection",
+        "title": "Manage Connection",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.disconnectProvider",
+        "title": "Disconnect Provider",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.returnToOperation",
+        "title": "Return to Active Operation",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.cancelOperation",
+        "title": "Cancel Operation",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.copyResult",
+        "title": "Copy Completed Result",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.changeDocumentType",
+        "title": "Change Document Type",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.changeModel",
+        "title": "Change Model",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.configureEditorialPreferences",
+        "title": "Configure Editorial Preferences",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.review.applySelected",
+        "title": "Apply Selected Changes",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.review.acceptAll",
+        "title": "Accept Full Rewrite",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.review.discard",
+        "title": "Discard Rewrite",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.review.return",
+        "title": "Return to Review",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.review.selectGroups",
+        "title": "Select Change Groups",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.review.selectAll",
+        "title": "Select All Change Groups",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.review.selectNone",
+        "title": "Clear Selected Groups",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.review.showChanges",
+        "title": "Show Current Changes",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.review.showFullProposal",
+        "title": "Inspect Full Proposal",
+        "category": "DeSlop"
+      },
+      {
+        "command": "deslop.review.copyResult",
+        "title": "Copy Reviewed Result",
         "category": "DeSlop"
       }
     ],
@@ -70,6 +161,23 @@
         "key": "shift+alt+d",
         "mac": "shift+alt+d",
         "when": "editorHasSelection && editorTextFocus"
+      },
+      {
+        "command": "deslop.review.applySelected",
+        "key": "ctrl+alt+enter",
+        "mac": "cmd+alt+enter",
+        "when": "deslop.reviewActive && !inQuickOpen"
+      },
+      {
+        "command": "deslop.review.discard",
+        "key": "escape",
+        "when": "deslop.reviewActive && !inQuickOpen"
+      },
+      {
+        "command": "deslop.review.selectGroups",
+        "key": "ctrl+alt+g",
+        "mac": "cmd+alt+g",
+        "when": "deslop.reviewActive && !inQuickOpen"
       }
     ],
     "menus": {
@@ -78,6 +186,28 @@
           "command": "deslop.humanizeSelection",
           "when": "editorHasSelection",
           "group": "1_modification"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "deslop.review.applySelected",
+          "when": "deslop.reviewActive",
+          "group": "navigation@1"
+        },
+        {
+          "command": "deslop.review.selectGroups",
+          "when": "deslop.reviewActive",
+          "group": "navigation@2"
+        },
+        {
+          "command": "deslop.review.showChanges",
+          "when": "deslop.reviewActive",
+          "group": "navigation@3"
+        },
+        {
+          "command": "deslop.review.discard",
+          "when": "deslop.reviewActive",
+          "group": "navigation@4"
         }
       ]
     },
@@ -111,17 +241,35 @@
             "Blog/Article"
           ],
           "default": null,
-          "description": "Pre-select document type; null means always prompt."
+          "description": "Explicit type takes precedence; otherwise infer recognised README/comment/commit contexts, reuse last choice only when enabled, or ask."
         },
         "deslop.showChangeLog": {
           "type": "boolean",
-          "default": true,
-          "description": "Show changelog panel after each accepted rewrite. (User-scope only; workspace overrides are ignored for safety.)"
+          "default": false,
+          "description": "Show model explanations after application. Off by default; Show Current Changes and Show Last Changes remain available. Existing explicit user choices are preserved; workspace overrides are ignored."
         },
         "deslop.autoAccept": {
           "type": "boolean",
           "default": false,
           "description": "Skip diff view and replace text immediately. (User-scope only; workspace overrides are ignored for safety.)"
+        },
+        "deslop.preservePunctuationStyle": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Ask the model to retain legitimate punctuation style. Not a mechanical guarantee; meaning and output integrity take precedence. User scope only; changes affect new requests, not existing results."
+        },
+        "deslop.preserveParagraphListStructure": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Ask the model to retain paragraph and list organisation. Not an exact formatting or meaning guarantee. User scope only; changes affect new requests, not existing results."
+        },
+        "deslop.rememberDocumentType": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Reuse the last explicitly selected document type when no explicit default or high-confidence context applies. Otherwise the last choice only changes picker ordering. User scope only; changes affect new requests, not existing results."
         }
       }
     }
@@ -134,6 +282,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext .ts",
     "test": "vscode-test",
+    "test:workflow": "node scripts/test-workflow.cjs",
     "posttest": "sh scripts/unregister-vscode-test.sh"
   },
   "devDependencies": {
