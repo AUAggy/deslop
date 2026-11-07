@@ -343,7 +343,10 @@ class ReviewSession {
     const tabs = vscode.window.tabGroups.all.flatMap(group => group.tabs).filter(tab =>
       tab.input instanceof vscode.TabInputTextDiff && tab.input.original.toString() === this.originalUri.toString());
     if (tabs.length) {
-      try { await vscode.window.tabGroups.close(tabs); } catch { /* already closed */ }
+      try {
+        if (await vscode.window.tabGroups.close(tabs)) { return; }
+      } catch { /* The session is settled even when the host cannot close its tabs. */ }
+      void vscode.window.showWarningMessage('The review session ended, but the editor could not close every preview tab. Close any remaining read-only DeSlop tabs manually.');
     }
   }
 }

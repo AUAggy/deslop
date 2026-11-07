@@ -144,7 +144,7 @@ The extension adds no telemetry and does not deliberately archive selected prose
 
 - Prose selections only; source-code selections are rejected. The current guard is 16,000 characters, roughly 3,000 words depending on the text.
 - No factual verification, missing-evidence invention, guaranteed meaning preservation or detector-evasion promise.
-- One active rewrite at a time; no automatic file-wide rewrite, writing-profile onboarding or hosted DeSlop inference.
+- One active rewrite at a time per extension host; no cross-window operation/credential transaction guarantee, automatic file-wide rewrite, writing-profile onboarding or hosted DeSlop inference.
 - An internet connection and a provider account with appropriate access/credit are required.
 - Registry listing or installation in another editor does not prove callback/review compatibility. The [versioned compatibility matrix](TESTING.md#compatibility-matrix) currently labels untested environments and pending primary-editor checks.
 - Editorial evaluations, consent-based volunteer observations, final screenshots and manual release gates remain pending. See [Testing](TESTING.md) and [Editorial evaluation](evaluation/README.md).

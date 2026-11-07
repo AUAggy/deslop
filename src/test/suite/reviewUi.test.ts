@@ -40,6 +40,7 @@ function harness() {
   let clipboard = '';
   let failOpen = false;
   let diffCalls = 0;
+  let closeFailure: 'false' | 'throw' | undefined;
   let delayed = false;
   const models = new Map<string, string>();
   const api = {
@@ -85,6 +86,8 @@ function harness() {
         all: [group], activeTabGroup: group,
         onDidChangeTabs: changedTabs.event, onDidChangeTabGroups: changedGroups.event,
         async close(tabs: any | any[]) {
+          if (closeFailure === 'false') { return false; }
+          if (closeFailure === 'throw') { throw new Error('mock close failure'); }
           const closed = Array.isArray(tabs) ? tabs : [tabs];
           group.tabs = group.tabs.filter(tab => !closed.includes(tab));
           group.activeTab = group.tabs.at(-1);
@@ -144,6 +147,7 @@ function harness() {
     closeGroupOnly: () => { group.tabs = []; group.activeTab = undefined; changedGroups.fire(undefined); },
     switchAway: () => { group.activeTab = { input: {} }; changedTabs.fire({ closed: [], opened: [], changed: [] }); },
     failNextOpen: () => { failOpen = true; },
+    failClose: (failure: 'false' | 'throw') => { closeFailure = failure; },
     delayUpdates: () => { delayed = true; },
     acknowledge: () => { for (const uri of models.keys()) { models.set(uri, providers.get('deslop-review').provideTextDocumentContent(Uri.parse(uri))); } },
     dispose: () => { for (const subscription of [...subscriptions].reverse()) { subscription.dispose(); } },
@@ -199,6 +203,21 @@ suite('review UI lifecycle — public API fakes', () => {
     await h.review.returnToReview();
     assert.strictEqual(h.group.tabs.length, 0);
     h.dispose();
+  });
+
+  test('refused or failed native tab closure still settles resources and gives manual recovery', async () => {
+    for (const failure of ['false', 'throw'] as const) {
+      const h = harness();
+      const pending = h.review.showReview(request);
+      await h.review.returnToReview();
+      h.failClose(failure);
+      await h.run('discard');
+      assert.deepStrictEqual(await pending, { kind: 'discard' });
+      await Promise.resolve();
+      assert.strictEqual(h.contexts.get('deslop.reviewAvailable'), false);
+      assert.ok(h.warnings.some(message => /tabs manually/.test(message)));
+      h.dispose();
+    }
   });
 
   test('group-only closure without a tab-closed event still settles review', async () => {
