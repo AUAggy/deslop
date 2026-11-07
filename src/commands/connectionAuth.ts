@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import OpenAI from 'openai';
 import { AUTH_LIFETIME_MS, PkceSession } from '../api/pkce';
-import { classifyProviderError, ProviderError } from '../api/errors';
+import { ProviderError } from '../api/errors';
+import { OPENROUTER_AUTH_NEXT_STEP, OPENROUTER_TIMEOUT_MESSAGE, openRouterAuthFailureMessage, type AuthPhase } from '../api/authMessages';
 import { verifyAuthentication } from '../api/providers';
 import { setApiKey, beginCredentialIntent, type CredentialIntent } from '../storage/secrets';
 
@@ -9,6 +10,7 @@ interface Pending {
   session: PkceSession;
   abort: AbortController;
   intent: CredentialIntent;
+  phase: AuthPhase;
   exchanging?: boolean;
   settle: (key: string | undefined) => void;
 }
@@ -31,13 +33,16 @@ export function registerConnectionHandlers(context: vscode.ExtensionContext): vs
       if (!attempt.intent.current()) { attempt.settle(undefined); return; }
       const fields = attempt.session.consume(uri);
       attempt.exchanging = true;
+      attempt.phase = 'exchange';
       const client = new OpenAI({ apiKey: 'unused', baseURL: 'https://openrouter.ai/api/v1', maxRetries: 0, logLevel: 'off' });
       const result = await client.post<{ key?: unknown }>('/auth/keys', {
         body: fields, headers: { Authorization: null }, timeout: 15000, signal: attempt.abort.signal,
       });
       if (!result || typeof result.key !== 'string' || result.key.length > 4096 || !/^[\x21-\x7e]+$/.test(result.key)) { throw new ProviderError('malformed'); }
+      attempt.phase = 'verify';
       await verifyAuthentication(result.key, 'openrouter', attempt.abort.signal);
       if (pending !== attempt || attempt.abort.signal.aborted) { return; }
+      attempt.phase = 'save';
       const saved = await setApiKey(context.secrets, result.key, 'openrouter', attempt.intent, () => attempt.abort.signal.aborted);
       if (!saved) { attempt.settle(undefined); return; }
       if (pending === attempt) {
@@ -46,7 +51,7 @@ export function registerConnectionHandlers(context: vscode.ExtensionContext): vs
       }
     } catch (error) {
       if (pending === attempt) {
-        void vscode.window.showErrorMessage(`OpenRouter authorisation did not complete. ${classifyProviderError(error).message} Use Enter Key or start a new connection. If saving failed, check the stored connection before retrying.`);
+        void vscode.window.showErrorMessage(`OpenRouter authorisation did not complete. ${openRouterAuthFailureMessage(attempt.phase, error)} ${OPENROUTER_AUTH_NEXT_STEP}`);
         attempt.settle(undefined);
       }
     }
@@ -87,13 +92,16 @@ export async function connectOpenRouter(signal?: AbortSignal): Promise<string | 
     let resolve!: (key: string | undefined) => void;
     const result = new Promise<string | undefined>(r => { resolve = r; });
     const intent = beginCredentialIntent(secrets, 'openrouter');
-    const attempt: Pending = { session, abort, intent, settle: key => {
+    const attempt: Pending = { session, abort, intent, phase: 'callback', settle: key => {
       if (pending !== attempt) { return; }
       pending = undefined;
       session.cancel(); abort.abort(); resolve(key);
     } };
     pending = attempt;
-    const timer = setTimeout(() => attempt.settle(undefined), AUTH_LIFETIME_MS);
+    const timer = setTimeout(() => {
+      if (pending === attempt) { void vscode.window.showWarningMessage(OPENROUTER_TIMEOUT_MESSAGE); }
+      attempt.settle(undefined);
+    }, AUTH_LIFETIME_MS);
     const cancellation = token.onCancellationRequested(() => attempt.settle(undefined));
     const cancel = () => attempt.settle(undefined);
     signal?.addEventListener('abort', cancel, { once: true });
@@ -106,6 +114,9 @@ export async function connectOpenRouter(signal?: AbortSignal): Promise<string | 
       ]);
       if (!routed) { return await result; }
       if (terminal() || pending !== attempt || !intent.current()) { attempt.settle(undefined); return undefined; }
+      // Bind the exact EXTERNAL callback (including the preset query asExternalUri added)
+      // before the browser opens; consume() validates inbound callbacks against it.
+      session.registerExternalCallback(routed.external);
       const opened = await Promise.race([
         vscode.env.openExternal(vscode.Uri.parse(session.authorizationUrl(routed.external.toString()))),
         result.then(() => undefined),
