@@ -1,33 +1,29 @@
 import * as vscode from 'vscode';
+import { activeProvider, type Provider } from '../api/providers';
 
 const KEYS = {
   openrouter: 'deslop.openrouterApiKey',
   venice: 'deslop.veniceApiKey',
 } as const;
 
-type Provider = keyof typeof KEYS;
-
-function activeProvider(): Provider {
-  const cfg = vscode.workspace.getConfiguration('deslop');
-  const p = cfg.get<string>('provider', 'openrouter');
-  return p === 'venice' ? 'venice' : 'openrouter';
-}
-
 export async function getApiKey(
-  secrets: vscode.SecretStorage
+  secrets: vscode.SecretStorage,
+  provider: Provider = activeProvider()
 ): Promise<string | undefined> {
-  return secrets.get(KEYS[activeProvider()]);
+  return secrets.get(KEYS[provider]);
 }
 
 export async function setApiKey(
   secrets: vscode.SecretStorage,
-  key: string
+  key: string,
+  provider: Provider = activeProvider()
 ): Promise<void> {
-  await secrets.store(KEYS[activeProvider()], key);
+  await secrets.store(KEYS[provider], key);
 }
 
 export async function deleteApiKey(
-  secrets: vscode.SecretStorage
+  secrets: vscode.SecretStorage,
+  provider: Provider = activeProvider()
 ): Promise<void> {
-  await secrets.delete(KEYS[activeProvider()]);
+  await secrets.delete(KEYS[provider]);
 }

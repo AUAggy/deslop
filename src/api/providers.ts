@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { ProviderError, classifyProviderError } from './errors';
 import * as vscode from 'vscode';
 import { SYSTEM_PROMPT } from '../prompts/system';
 import { MODIFIERS } from '../prompts/modifiers';
@@ -24,12 +25,20 @@ const PROVIDER_CONFIG = {
   },
 } as const;
 
-type Provider = keyof typeof PROVIDER_CONFIG;
+export type Provider = keyof typeof PROVIDER_CONFIG;
 
-function getProviderConfig(): (typeof PROVIDER_CONFIG)[Provider] {
-  const cfg = vscode.workspace.getConfiguration('deslop');
-  const p = cfg.get<string>('provider', 'openrouter');
-  return p === 'venice' ? PROVIDER_CONFIG.venice : PROVIDER_CONFIG.openrouter;
+export function activeProvider(): Provider {
+  return vscode.workspace.getConfiguration('deslop').get<string>('provider', 'openrouter') === 'venice' ? 'venice' : 'openrouter';
+}
+export interface RequestOptions {
+  readonly provider: Provider;
+  readonly model: string;
+  readonly signal?: AbortSignal;
+  /** Captured output of editorial.buildPreferenceInstructions only; never read free-form settings. */
+  readonly preferenceInstructions?: string;
+}
+export function captureRequestOptions(provider: Provider = activeProvider()): RequestOptions {
+  return { provider, model: resolveModel(vscode.workspace.getConfiguration('deslop'), PROVIDER_CONFIG[provider].defaultModel) };
 }
 
 export function resolveModel(cfg: vscode.WorkspaceConfiguration, defaultModel: string): string {
@@ -52,19 +61,24 @@ export function isSelectionTooLong(text: string): boolean {
 export async function callHumanize(
   apiKey: string,
   text: string,
-  docType: DocumentType
+  docType: DocumentType,
+  options: RequestOptions = captureRequestOptions()
 ): Promise<HumanizeResponse> {
-  const cfg = vscode.workspace.getConfiguration('deslop');
-  const provider = getProviderConfig();
-  const model = resolveModel(cfg, provider.defaultModel);
+  try {
+  const provider = PROVIDER_CONFIG[options.provider];
+  const model = options.model;
+  if (options.signal?.aborted) { throw new ProviderError('cancelled'); }
 
   const client = new OpenAI({
     apiKey,
     baseURL: provider.baseURL,
     defaultHeaders: provider.defaultHeaders,
+    maxRetries: 0,
   });
 
-  const systemPrompt = `${SYSTEM_PROMPT}\n\n${MODIFIERS[docType]}`;
+  const instructions = options.preferenceInstructions ?? '';
+  if (instructions.length > 2000) { throw new ProviderError('malformed'); }
+  const systemPrompt = `${SYSTEM_PROMPT}\n\n${MODIFIERS[docType]}` + (instructions ? `\n\n${instructions}` : '');
 
   const response = await client.chat.completions.create(
     {
@@ -78,30 +92,30 @@ export async function callHumanize(
         },
       ],
     },
-    { timeout: HUMANIZE_TIMEOUT_MS }
+    { timeout: HUMANIZE_TIMEOUT_MS, signal: options.signal }
   );
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
-    throw new Error('Empty response from API');
+    throw new ProviderError('malformed');
   }
 
   let parsed: HumanizeResponse;
   try {
     parsed = JSON.parse(raw) as HumanizeResponse;
   } catch {
-    throw new Error('API returned invalid JSON');
+    throw new ProviderError('malformed');
   }
 
-  if (typeof parsed.rewritten !== 'string' || !Array.isArray(parsed.changes)) {
-    throw new Error('API response missing required fields');
+  if (!parsed || typeof parsed.rewritten !== 'string' || !Array.isArray(parsed.changes)) {
+    throw new ProviderError('malformed');
   }
 
   parsed.changes = sanitiseChanges(parsed.changes);
 
   const protectedIssues = verifyProtectedRegions(text, parsed.rewritten);
   if (protectedIssues.length > 0) {
-    throw new Error(`Rewrite changed protected content: ${protectedIssues[0]}`);
+    throw new ProviderError('integrity');
   }
 
   // Output integrity guard: strip invisible Unicode and normalise confusable
@@ -124,7 +138,11 @@ export async function callHumanize(
   }
   parsed.rewritten = stripped.text;
 
+  if (options.signal?.aborted) { throw new ProviderError('cancelled'); }
   return parsed;
+  } catch (error) {
+    throw classifyProviderError(error);
+  }
 }
 
 export function sanitiseChanges(raw: unknown[]): { pattern: string; action: string }[] {
@@ -138,29 +156,24 @@ export function sanitiseChanges(raw: unknown[]): { pattern: string; action: stri
   );
 }
 
-export async function validateApiKey(apiKey: string): Promise<'valid' | 'invalid' | 'network-error'> {
+export async function verifyAuthentication(apiKey: string, provider: Provider, signal?: AbortSignal): Promise<void> {
+  const client = new OpenAI({ apiKey, baseURL: PROVIDER_CONFIG[provider].baseURL, maxRetries: 0 });
   try {
-    const cfg = vscode.workspace.getConfiguration('deslop');
-    const provider = getProviderConfig();
-    const model = resolveModel(cfg, provider.defaultModel);
-    const client = new OpenAI({
-      apiKey,
-      baseURL: provider.baseURL,
-    });
-    await client.chat.completions.create(
-      {
-        model,
-        max_tokens: 16,
-        messages: [{ role: 'user', content: 'hi' }],
-      },
-      { timeout: 10000 }
-    );
-    return 'valid';
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (/\b401\b/.test(msg) || /\b403\b/.test(msg) || msg.includes('invalid_api_key')) {
-      return 'invalid';
-    }
-    return 'network-error';
-  }
+    // These authenticated metadata endpoints make no completion request.
+    const response = await client.get<{ data?: unknown }>(provider === 'openrouter' ? '/key' : '/api_keys/rate_limits', { timeout: 10000, signal });
+    if (!response || !response.data || typeof response.data !== 'object') { throw new ProviderError('malformed'); }
+  } catch (error) { throw classifyProviderError(error); }
+}
+
+export async function testModelReadiness(apiKey: string, options: RequestOptions): Promise<void> {
+  const client = new OpenAI({ apiKey, baseURL: PROVIDER_CONFIG[options.provider].baseURL, maxRetries: 0 });
+  try {
+    await client.chat.completions.create({ model: options.model, max_tokens: 16, messages: [{ role: 'user', content: 'Reply OK.' }] }, { timeout: 10000, signal: options.signal });
+  } catch (error) { throw classifyProviderError(error); }
+}
+
+/** Compatibility wrapper; new UI uses verifyAuthentication for precise failures. */
+export async function validateApiKey(apiKey: string, provider: Provider = activeProvider()): Promise<'valid' | 'invalid' | 'network-error'> {
+  try { await verifyAuthentication(apiKey, provider); return 'valid'; }
+  catch (error) { return classifyProviderError(error).category === 'authentication' ? 'invalid' : 'network-error'; }
 }
