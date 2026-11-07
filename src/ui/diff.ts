@@ -20,36 +20,30 @@ export async function showDiffAndPrompt(
   edit.insert(rewrittenUri, new vscode.Position(0, 0), rewritten);
   await vscode.workspace.applyEdit(edit);
 
-  let choice: 'Accept' | 'Discard' | undefined;
+  await vscode.commands.executeCommand(
+    'vscode.diff',
+    origUri,
+    rewrittenUri,
+    'DeSlop: Review Changes'
+  );
 
-  try {
-    await vscode.commands.executeCommand(
-      'vscode.diff',
-      origUri,
-      rewrittenUri,
-      'DeSlop: Review Changes'
-    );
+  const choice = await waitForStatusBarChoice();
 
-    choice = await waitForStatusBarChoice();
+  const tabsToClose = vscode.window.tabGroups.all
+    .flatMap((g) => g.tabs)
+    .filter((tab) => {
+      if (tab.input instanceof vscode.TabInputTextDiff) {
+        const d = tab.input as vscode.TabInputTextDiff;
+        return (
+          d.original.toString() === origUri.toString() ||
+          d.modified.toString() === rewrittenUri.toString()
+        );
+      }
+      return false;
+    });
 
-    const tabsToClose = vscode.window.tabGroups.all
-      .flatMap((g) => g.tabs)
-      .filter((tab) => {
-        if (tab.input instanceof vscode.TabInputTextDiff) {
-          const d = tab.input as vscode.TabInputTextDiff;
-          return (
-            d.original.toString() === origUri.toString() ||
-            d.modified.toString() === rewrittenUri.toString()
-          );
-        }
-        return false;
-      });
-
-    for (const tab of tabsToClose) {
-      try { await vscode.window.tabGroups.close(tab); } catch { /* ignore */ }
-    }
-  } finally {
-    // Nothing to clean up — in-memory documents are discarded with the tab.
+  for (const tab of tabsToClose) {
+    try { await vscode.window.tabGroups.close(tab); } catch { /* ignore */ }
   }
 
   return choice === 'Accept';

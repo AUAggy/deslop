@@ -47,28 +47,10 @@ export function verifyProtectedRegions(
 }
 
 export function collectProtectedRegions(text: string): ProtectedRegion[] {
-  const regions: ProtectedRegion[] = [];
-  const occupied: Range[] = [];
-
-  const frontmatter = FRONTMATTER_RE.exec(text);
-  if (frontmatter?.[0]) {
-    regions.push({ kind: 'frontmatter', text: frontmatter[0] });
-    occupied.push({ start: 0, end: frontmatter[0].length });
-  }
-
-  for (const range of findCodeFenceRanges(text)) {
-    regions.push({ kind: 'code fence', text: text.slice(range.start, range.end) });
-    occupied.push(range);
-  }
-
-  const inlineSearchText = maskRanges(text, occupied);
-  let inlineMatch: RegExpExecArray | null;
-  INLINE_CODE_RE.lastIndex = 0;
-  while ((inlineMatch = INLINE_CODE_RE.exec(inlineSearchText)) !== null) {
-    regions.push({ kind: 'inline code', text: text.slice(inlineMatch.index, inlineMatch.index + inlineMatch[0].length) });
-  }
-
-  return regions;
+  return collectProtectedRanges(text).map(({ kind, start, end }) => ({
+    kind,
+    text: text.slice(start, end),
+  }));
 }
 
 function findCodeFenceRanges(text: string): Range[] {
@@ -78,9 +60,6 @@ function findCodeFenceRanges(text: string): Range[] {
 
   while ((match = lineRe.exec(text)) !== null) {
     const start = match.index;
-    const afterOpening = lineRe.lastIndex;
-    lineRe.lastIndex = afterOpening;
-
     const closing = lineRe.exec(text);
     const end = closing ? lineRe.lastIndex : text.length;
     ranges.push({ start, end });
@@ -144,26 +123,26 @@ function isTagCharacter(cp: number): boolean {
   return cp >= 0xe0001 && cp <= 0xe007f;
 }
 
-// Protected ranges in a single text, for the strip pass. Mirrors
-// collectProtectedRegions but returns positions instead of contents.
-function collectProtectedRanges(text: string): Range[] {
-  const ranges: Range[] = [];
+function collectProtectedRanges(text: string): (Range & { kind: ProtectedKind })[] {
+  const ranges: (Range & { kind: ProtectedKind })[] = [];
 
   const frontmatter = FRONTMATTER_RE.exec(text);
   if (frontmatter?.[0]) {
-    ranges.push({ start: 0, end: frontmatter[0].length });
+    ranges.push({ kind: 'frontmatter', start: 0, end: frontmatter[0].length });
   }
 
-  ranges.push(...findCodeFenceRanges(text));
+  for (const range of findCodeFenceRanges(text)) {
+    ranges.push({ kind: 'code fence', ...range });
+  }
 
   const inlineSearchText = maskRanges(text, ranges);
   let inlineMatch: RegExpExecArray | null;
   INLINE_CODE_RE.lastIndex = 0;
   while ((inlineMatch = INLINE_CODE_RE.exec(inlineSearchText)) !== null) {
-    ranges.push({ start: inlineMatch.index, end: inlineMatch.index + inlineMatch[0].length });
+    ranges.push({ kind: 'inline code', start: inlineMatch.index, end: inlineMatch.index + inlineMatch[0].length });
   }
 
-  return ranges.sort((a, b) => a.start - b.start);
+  return ranges;
 }
 
 export function stripInvisible(rewritten: string): {
@@ -171,7 +150,7 @@ export function stripInvisible(rewritten: string): {
   invisibleCount: number;
   confusableCount: number;
 } {
-  const protectedRanges = collectProtectedRanges(rewritten);
+  const protectedRanges = collectProtectedRanges(rewritten).sort((a, b) => a.start - b.start);
 
   let out = '';
   let invisibleCount = 0;

@@ -30,11 +30,6 @@ export function showChangelog(): void {
   getChannel().show(false);
 }
 
-export function disposeChannel(): void {
-  channel?.dispose();
-  channel = undefined;
-}
-
 export function initChannel(context: vscode.ExtensionContext): void {
   const ch = getChannel();
   context.subscriptions.push(ch);

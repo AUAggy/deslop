@@ -50,7 +50,6 @@ export async function humanizeSelection(
   const selectedText = editor.document.getText(selection);
   const documentVersionAtStart = editor.document.version;
 
-  // G5: reject code selections
   const prose = await isProseSelection(editor.document, selection);
   if (!prose) {
     vscode.window.showErrorMessage(
@@ -68,7 +67,6 @@ export async function humanizeSelection(
     return;
   }
 
-  // API key
   const apiKey = await ensureApiKey(context.secrets);
   if (!apiKey) {
     return;
@@ -108,7 +106,6 @@ export async function humanizeSelection(
     }
   }
 
-  // Status bar label: doc type + provider
   const provider = config.get<string>('provider', 'openrouter');
   const providerLabel = provider === 'venice' ? 'Venice' : 'OpenRouter';
   showSpinner(context, `${docType} via ${providerLabel}`);
@@ -191,7 +188,6 @@ export async function humanizeSelection(
   workspaceEdit.replace(editor.document.uri, selection, result.rewritten);
   await vscode.workspace.applyEdit(workspaceEdit);
 
-  // Changelog
   const showLog = readTrustedBoolean(config, 'showChangeLog', true);
   if (showLog) {
     logChanges(result.changes, docType);

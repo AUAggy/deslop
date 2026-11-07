@@ -1,6 +1,4 @@
 import * as assert from 'assert';
-import * as fs from 'fs';
-import * as os from 'os';
 import * as vscode from 'vscode';
 import { readTrustedBoolean } from '../../commands/humanize';
 
@@ -54,16 +52,5 @@ suite('readTrustedBoolean', () => {
   test('globalValue=false overrides defaultValue=true', () => {
     const cfg = fakeConfig({ defaultValue: true, globalValue: false, workspaceValue: true });
     assert.strictEqual(readTrustedBoolean(cfg, 'showChangeLog', true), false);
-  });
-});
-
-suite('diff module — no temp files', () => {
-  test('no deslop-* files in os.tmpdir() after module load', async () => {
-    await import('../../ui/diff.js');
-    const stragglers = fs.readdirSync(os.tmpdir()).filter((f) => f.startsWith('deslop-'));
-    if (stragglers.length > 0) {
-      console.warn('Pre-existing deslop tmp files (from older code):', stragglers);
-    }
-    assert.ok(true);
   });
 });
