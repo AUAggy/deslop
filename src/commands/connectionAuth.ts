@@ -76,6 +76,12 @@ export async function connectOpenRouter(signal?: AbortSignal): Promise<string | 
   ]);
   if (consent !== 'Continue' || signal?.aborted || extensionId !== authority) { return undefined; }
   return await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Waiting for OpenRouter. Cancel to use manual key entry.', cancellable: true }, async (_progress, token) => {
+    // A deferred progress task can start after cancellation or handler disposal.
+    // Check ownership before constructing or routing anything, then again after
+    // the abort/cancel listeners are installed to close the pre-listener gap.
+    const live = () => extensionId === authority && secretStorage === secrets;
+    const terminal = () => !!signal?.aborted || token.isCancellationRequested || !live();
+    if (terminal()) { return undefined; }
     const session = new PkceSession(vscode.env.uriScheme, authority);
     const abort = new AbortController();
     let resolve!: (key: string | undefined) => void;
@@ -91,6 +97,7 @@ export async function connectOpenRouter(signal?: AbortSignal): Promise<string | 
     const cancellation = token.onCancellationRequested(() => attempt.settle(undefined));
     const cancel = () => attempt.settle(undefined);
     signal?.addEventListener('abort', cancel, { once: true });
+    if (terminal()) { attempt.settle(undefined); return await result; }
     try {
       const callback = vscode.Uri.from({ scheme: session.scheme, authority: session.authority, path: session.path });
       const routed = await Promise.race([
@@ -98,7 +105,7 @@ export async function connectOpenRouter(signal?: AbortSignal): Promise<string | 
         result.then(() => undefined),
       ]);
       if (!routed) { return await result; }
-      if (pending !== attempt || signal?.aborted || token.isCancellationRequested || !intent.current()) { attempt.settle(undefined); return undefined; }
+      if (terminal() || pending !== attempt || !intent.current()) { attempt.settle(undefined); return undefined; }
       const opened = await Promise.race([
         vscode.env.openExternal(vscode.Uri.parse(session.authorizationUrl(routed.external.toString()))),
         result.then(() => undefined),

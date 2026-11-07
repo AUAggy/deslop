@@ -175,7 +175,7 @@ async function main() {
     assert.equal(await replacing, undefined);
     assert.equal(stores.has('deslop.openrouterApiKey'), false);
   });
-  const registration = onboarding.registerConnectionHandlers({ extension: { id: 'auaggy.deslop' }, secrets });
+  let registration = onboarding.registerConnectionHandlers({ extension: { id: 'auaggy.deslop' }, secrets });
   try {
     await check('late test of a replaced credential cannot report current authentication success', async () => {
       let release;
@@ -203,6 +203,48 @@ async function main() {
       assert.equal(await flow.result, 'synthetic-exchanged-key'); assert.equal(stores.get('deslop.openrouterApiKey'), 'synthetic-exchanged-key'); assert.equal(stores.get('deslop.veniceApiKey'), 'old-venice');
       assert.equal(posts[0].path, '/auth/keys'); assert.equal(posts[0].options.headers.Authorization, null); assert.equal(posts[0].options.body.code_challenge_method, 'S256'); assert.equal(gets[0].path, '/key');
       await handler.handleUri(uri(flow.callback + '?code=synthetic-code')); assert.equal(posts.length, 1);
+    });
+    await check('abort before deferred progress callback does not route or open the browser', async () => {
+      const oldProgress = fakeVscode.window.withProgress;
+      const oldRoute = fakeVscode.env.asExternalUri;
+      let startTask, routed = false;
+      fakeVscode.window.withProgress = (options, run) => options.title.startsWith('Waiting for OpenRouter')
+        ? new Promise((resolve, reject) => { startTask = () => Promise.resolve(run({}, { isCancellationRequested: false, onCancellationRequested: fn => { cancelled = fn; return disposable(); } })).then(resolve, reject); })
+        : oldProgress(options, run);
+      fakeVscode.env.asExternalUri = value => { routed = true; return Promise.resolve(value); };
+      try {
+        const controller = new AbortController(); info.push('Continue');
+        const flow = auth.connectOpenRouter(controller.signal); await tick();
+        assert.ok(startTask, 'progress task deferred');
+        controller.abort();
+        startTask(); await tick();
+        assert.equal(routed, false, 'aborted task must not begin routing');
+        assert.equal(opened, undefined, 'aborted task must not open the browser');
+        assert.equal(await flow, undefined);
+      } finally { fakeVscode.window.withProgress = oldProgress; fakeVscode.env.asExternalUri = oldRoute; }
+      const next = await startAuth(); cancelled(); assert.equal(await next.result, undefined);
+    });
+    await check('dispose before deferred progress callback cannot route or open the browser', async () => {
+      const oldProgress = fakeVscode.window.withProgress;
+      const oldRoute = fakeVscode.env.asExternalUri;
+      let startTask, routed = false;
+      fakeVscode.window.withProgress = (options, run) => options.title.startsWith('Waiting for OpenRouter')
+        ? new Promise((resolve, reject) => { startTask = () => Promise.resolve(run({}, { isCancellationRequested: false, onCancellationRequested: fn => { cancelled = fn; return disposable(); } })).then(resolve, reject); })
+        : oldProgress(options, run);
+      fakeVscode.env.asExternalUri = value => { routed = true; return Promise.resolve(value); };
+      try {
+        info.push('Continue'); const flow = auth.connectOpenRouter(); await tick();
+        assert.ok(startTask);
+        registration.dispose();
+        startTask(); await tick();
+        assert.equal(routed, false, 'disposed task must not begin routing');
+        assert.equal(opened, undefined, 'disposed task must not open the browser');
+        assert.equal(await flow, undefined);
+      } finally {
+        fakeVscode.window.withProgress = oldProgress; fakeVscode.env.asExternalUri = oldRoute;
+        registration = onboarding.registerConnectionHandlers({ extension: { id: 'auaggy.deslop' }, secrets });
+      }
+      cancelled();
     });
     await check('abort during browser consent releases ownership and ignores late Continue', async () => {
       const old = fakeVscode.window.showInformationMessage; let release;
