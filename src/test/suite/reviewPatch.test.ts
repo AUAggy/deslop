@@ -92,6 +92,8 @@ suite('deterministic review composition', () => {
       ['_old\nanchor\nend_\n', 'new\nanchor\nend\n'],
       ['[old][ref]\nanchor\n[ref]: https://example.com\n', 'new\nanchor\nplain note\n'],
       ['<strong>old\nanchor\nend</strong>\n', 'new\nanchor\nend\n'],
+      ['"""old\nanchor\nend"""\n', 'new\nanchor\nend\n'],
+      ["'''old\nanchor\nend'''\n", 'new\nanchor\nend\n'],
     ];
     for (const [original, rewritten] of cases) {
       const patch = createReviewPatch(original, rewritten);

@@ -145,19 +145,19 @@ async function main() {
   });
   await check('abort before inference and oversized instructions make no request', async () => {
     const controller = new AbortController(); controller.abort();
-    await assert.rejects(api.callHumanize('synthetic', 'Text', 'readme', { provider: 'openrouter', model: 'captured', signal: controller.signal }), e => e.category === 'cancelled');
-    await assert.rejects(api.callHumanize('synthetic', 'Text', 'readme', { provider: 'openrouter', model: 'captured', preferenceInstructions: 'x'.repeat(2001) }), e => e.category === 'malformed');
+    await assert.rejects(api.callHumanize('synthetic', 'Text', 'README', { provider: 'openrouter', model: 'captured', signal: controller.signal }), e => e.category === 'cancelled');
+    await assert.rejects(api.callHumanize('synthetic', 'Text', 'README', { provider: 'openrouter', model: 'captured', preferenceInstructions: 'x'.repeat(2001) }), e => e.category === 'malformed');
     assert.equal(completions.length, 0);
   });
   await check('late cancelled response is rejected', async () => {
     const controller = new AbortController(); createImpl = async () => { controller.abort(); return { choices: [{ message: { content: '{"rewritten":"Clear text.","changes":[]}' } }] }; };
-    await assert.rejects(api.callHumanize('synthetic', 'Clear text.', 'readme', { provider: 'openrouter', model: 'captured', signal: controller.signal }), e => e.category === 'cancelled');
+    await assert.rejects(api.callHumanize('synthetic', 'Clear text.', 'README', { provider: 'openrouter', model: 'captured', signal: controller.signal }), e => e.category === 'cancelled');
   });
   await check('malformed response and integrity failure remain distinct', async () => {
     createImpl = async () => ({ choices: [{ message: { content: 'null' } }] });
-    await assert.rejects(api.callHumanize('synthetic', 'Text', 'readme'), e => e.category === 'malformed');
+    await assert.rejects(api.callHumanize('synthetic', 'Text', 'README'), e => e.category === 'malformed');
     createImpl = async () => ({ choices: [{ message: { content: '{"rewritten":"removed code", "changes":[]}' } }] });
-    await assert.rejects(api.callHumanize('synthetic', '`protected` text', 'readme'), e => e.category === 'integrity');
+    await assert.rejects(api.callHumanize('synthetic', '`protected` text', 'README'), e => e.category === 'integrity');
   });
   for (const envelope of [null, {}, { choices: [] }, { error: { code: 503 } }, { choices: [{ message: { content: '' } }] }]) {
     await check('malformed inference and readiness envelopes fail closed: ' + JSON.stringify(envelope), async () => {

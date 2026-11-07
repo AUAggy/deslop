@@ -106,7 +106,7 @@ function newlineCount(text: string): number {
 function hasDependentStructure(text: string): boolean {
   // Without a Markdown parser, delimiter pairs (including multiline links,
   // emphasis and HTML) cannot honestly be offered as independent line edits.
-  return collectProtectedRegions(text).length > 0 || /[`~*_<>]|\[|\]|^\s*(?:[-+]\s|\d+[.)]\s|#{1,6}\s|---\s*$|\+\+\+\s*$|\|)/m.test(text);
+  return collectProtectedRegions(text).length > 0 || /"""|'''|[`~*_<>]|\[|\]|^\s*(?:[-+]\s|\d+[.)]\s|#{1,6}\s|---\s*$|\+\+\+\s*$|\|)/m.test(text);
 }
 
 /** Always reconstruct from original offsets; selection order cannot affect text. */
