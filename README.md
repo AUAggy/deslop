@@ -23,8 +23,6 @@ Over **4,000 downloads** across the VS Code Marketplace and Open VSX.
   <a href="#privacy-and-costs">Privacy</a>
 </p>
 
-> Next-release preview: this branch documents the tested feature build, not the currently published extension. See the [release notes](https://github.com/AUAggy/deslop/releases) for published versions.
-
 ## Cut the filler, keep the point
 
 DeSlop targets padded lead-ins, repeated claims, hype and canned phrasing. It edits existing prose rather than supplying missing evidence or facts.
