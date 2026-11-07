@@ -138,9 +138,10 @@ class ReviewSession {
       const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
       item.text = text;
       item.command = { command: `deslop.review.${action}`, title: text, arguments: [this.id] };
-      item.tooltip = this.patch.groups.length === 1 && this.patch.groups[0].reason
-        ? `One coarse whole-rewrite group: ${this.patch.groups[0].reason}`
-        : 'DeSlop: read-only review; source is unchanged until application';
+      const coarse = this.patch.groups.filter(group => group.reason?.includes('Coarse'));
+      item.tooltip = coarse.length
+        ? `${coarse.length} coarse local comparison/ambiguous blocks. Inspect their grouping reasons in Change Groups.`
+        : 'DeSlop: read-only review; text groups are not a guarantee of semantic independence. Source is unchanged until application';
       this.status.push(item);
       this.subscriptions.push(item);
     }
@@ -203,7 +204,7 @@ class ReviewSession {
   async open(full = false): Promise<void> {
     if (this.disposed) { return; }
     await vscode.commands.executeCommand('vscode.diff', this.originalUri, full ? this.fullUri : this.composedUri,
-      `DeSlop: ${full ? 'Full proposal' : 'Selected changes'} (read-only; ${this.patch.groups.length} ${this.patch.groups.length === 1 && this.patch.groups[0].reason ? 'coarse whole-rewrite group' : 'groups'}) — ${metadataLabel(this.request.metadata)}`,
+      `DeSlop: ${full ? 'Full proposal' : 'Selected changes'} (read-only; ${this.patch.groups.length} groups${this.patch.groups.some(group => group.reason?.includes('Coarse')) ? ', includes coarse local blocks' : ''}) — ${metadataLabel(this.request.metadata)}`,
       { preview: false });
     if (this.disposed) { await this.closeTabs(); } else { this.opened = true; this.updateContext(); }
   }
@@ -301,6 +302,7 @@ class ReviewSession {
       label: `Change ${i + 1} — original line ${1 + this.request.original.slice(0, group.start).split('\n').length - 1}`,
       description: group.reason ?? 'Text change group',
       detail: `Before: ${snippet(group.before, group.after)} → After: ${snippet(group.after, group.before)}`,
+      buttons: [{ iconPath: new vscode.ThemeIcon('go-to-file'), tooltip: 'Reveal this change in the selected preview' }],
     }));
     this.syncPicker();
     const listeners = [
@@ -310,6 +312,13 @@ class ReviewSession {
       picker.onDidTriggerButton(button => {
         this.setSelection(button === all ? this.patch.groups.map(g => g.id) : []);
         this.syncPicker();
+      }),
+      picker.onDidTriggerItemButton(event => {
+        const id = event.item.id;
+        picker.hide();
+        void this.revealGroup(id).catch(() => {
+          void vscode.window.showWarningMessage('This change could not be revealed. Use Return to Review and inspect the native diff; source text was not changed.');
+        });
       }),
       picker.onDidAccept(() => { picker.hide(); void this.open().catch(() => {
         void vscode.window.showWarningMessage('Review could not be reopened. Use Return to Review, copy the completed result, or discard.');
@@ -322,6 +331,25 @@ class ReviewSession {
     ];
     this.subscriptions.push(...listeners);
     picker.show();
+  }
+
+  private async revealGroup(id: string): Promise<void> {
+    const group = this.patch.groups.find(candidate => candidate.id === id);
+    if (!group || this.disposed) { return; }
+    await this.open();
+    if (this.disposed || !this.exactPreview(this.composition.text)) { return; }
+    const editor = vscode.window.visibleTextEditors.find(candidate => candidate.document.uri.toString() === this.composedUri.toString());
+    if (!editor) {
+      void vscode.window.showInformationMessage('The selected native diff is open. Use its change navigation to inspect this group.');
+      return;
+    }
+    let offset = group.start;
+    for (const previous of this.patch.groups) {
+      if (previous.id === id) { break; }
+      if (this.selected.has(previous.id)) { offset += previous.after.length - previous.before.length; }
+    }
+    const length = this.selected.has(id) ? group.after.length : group.before.length;
+    editor.revealRange(new vscode.Range(editor.document.positionAt(offset), editor.document.positionAt(offset + length)), vscode.TextEditorRevealType.InCenter);
   }
 
   finish(result: ReviewResult): void {

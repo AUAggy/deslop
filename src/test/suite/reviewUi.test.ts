@@ -37,6 +37,7 @@ function harness() {
   const warnings: string[] = [];
   const output: { lines: string[]; shown: number } = { lines: [], shown: 0 };
   const pickers: any[] = [];
+  const reveals: { uri: string; start: number; end: number }[] = [];
   let clipboard = '';
   let failOpen = false;
   let diffCalls = 0;
@@ -45,6 +46,8 @@ function harness() {
   const models = new Map<string, string>();
   const api = {
     Uri, TabInputTextDiff: TabDiff, EventEmitter: Emitter,
+    Range: class { constructor(readonly start: number, readonly end: number) {} },
+    TextEditorRevealType: { InCenter: 1 },
     StatusBarAlignment: { Left: 1 }, ThemeIcon: class { constructor(readonly id: string) {} },
     commands: {
       registerCommand(id: string, callback: (...args: any[]) => any) {
@@ -82,6 +85,12 @@ function harness() {
       },
     },
     window: {
+      get visibleTextEditors() {
+        return [...models.keys()].map(uri => ({
+          document: { uri: Uri.parse(uri), positionAt: (offset: number) => offset },
+          revealRange: (range: { start: number; end: number }) => reveals.push({ uri, ...range }),
+        }));
+      },
       tabGroups: {
         all: [group], activeTabGroup: group,
         onDidChangeTabs: changedTabs.event, onDidChangeTabGroups: changedGroups.event,
@@ -98,6 +107,7 @@ function harness() {
       onDidChangeActiveTextEditor: changedEditor.event,
       createStatusBarItem: () => ({ show() {}, hide() {}, dispose() {} }),
       showWarningMessage: async (message: string) => { warnings.push(message); },
+      showInformationMessage: async (message: string) => { warnings.push(message); },
       createOutputChannel: () => ({
         clear: () => { output.lines = []; }, appendLine: (line: string) => output.lines.push(line),
         show: () => output.shown++, dispose() {},
@@ -105,13 +115,15 @@ function harness() {
       createQuickPick: () => {
         const selection = new Emitter<any>();
         const trigger = new Emitter<any>();
+        const itemButton = new Emitter<any>();
         const accept = new Emitter<any>();
         const hide = new Emitter<any>();
         const picker = {
           items: [] as any[], selectedItems: [] as any[],
           onDidChangeSelection: selection.event, onDidTriggerButton: trigger.event,
+          onDidTriggerItemButton: itemButton.event,
           onDidAccept: accept.event, onDidHide: hide.event,
-          selection, trigger, accept, show() {}, hide: () => hide.fire(undefined), dispose() {},
+          selection, trigger, itemButton, accept, show() {}, hide: () => hide.fire(undefined), dispose() {},
         };
         pickers.push(picker);
         return picker;
@@ -140,7 +152,7 @@ function harness() {
   review.registerReviewCommands({ subscriptions } as any);
   const run = (action: string, target?: unknown) => commands.get(`deslop.review.${action}`)?.(target);
   return {
-    review, group, run, providers, contexts, warnings, output, pickers, commands,
+    review, group, run, providers, contexts, warnings, output, pickers, commands, reveals,
     get clipboard() { return clipboard; }, get diffCalls() { return diffCalls; },
     getPreview: () => providers.get('deslop-review').provideTextDocumentContent(group.tabs.find(tab => tab.input.modified.toString().includes('selected-read-only')).input.modified),
     close: () => api.window.tabGroups.close(group.tabs.find(tab => tab.input.modified.toString().includes('selected-read-only'))),
@@ -192,6 +204,30 @@ suite('review UI lifecycle — public API fakes', () => {
     h.dispose();
     assert.strictEqual(h.commands.size, 0);
     assert.strictEqual(h.providers.size, 0);
+  });
+
+  test('README groups reveal selected and excluded spans in the exact composed preview with stable offsets', async () => {
+    const h = harness();
+    const original = '# Project\n\nOld intro.\n\nUse `run()`.\n\nOld conclusion.';
+    const rewritten = original.replace('Old intro', 'A much longer introduction').replace('Old conclusion', 'New ending');
+    const pending = h.review.showReview({ original, rewritten });
+    await h.run('selectGroups');
+    const picker = h.pickers[0];
+    assert.strictEqual(picker.items.length, 2);
+    picker.selection.fire([picker.items[0]]);
+    picker.itemButton.fire({ item: picker.items[1] });
+    for (let i = 0; i < 5; i++) { await Promise.resolve(); }
+    assert.strictEqual(h.reveals.length, 1);
+    const preview = h.getPreview();
+    const reveal = h.reveals[0];
+    assert.match(reveal.uri, /selected-read-only/);
+    assert.strictEqual(preview.slice(reveal.start, reveal.end), 'Old conclusion');
+    assert.strictEqual(preview, original.replace('Old intro', 'A much longer introduction'));
+    await h.run('applySelected');
+    const result = await pending;
+    assert.strictEqual(result.kind, 'apply');
+    if (result.kind === 'apply') { assert.strictEqual(result.text, preview); }
+    h.dispose();
   });
 
   test('close settles discard; commands cannot revive or accept stale sessions', async () => {
