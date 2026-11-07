@@ -30,6 +30,7 @@ function reset() {
       callback({ replace: (range, text) => state.edits.push({ range, text, options }) });
       return state.applied && version === state.document.version;
     } };
+  state.sourceEditor = state.editor;
   state.context = { secrets: {}, globalState: { get: () => undefined, update: async () => {} } };
 }
 
@@ -46,6 +47,11 @@ async function load() {
       env: { clipboard: { writeText: async text => state.clipboard.push(text) } },
       window: {
         get activeTextEditor() { return state.editor; },
+        showTextDocument: async document => {
+          assert.equal(document, state.document);
+          if (state.onReveal) { state.onReveal(); }
+          return state.sourceEditor;
+        },
         showQuickPick: async () => { state.typePicks++; return undefined; },
         showInputBox: async options => { state.lastInput = options; return state.newModel; },
         showInformationMessage: async (message) => { state.infos.push(message); return state.infoAction; },
@@ -225,6 +231,14 @@ test('tab switching still applies to captured editor as one undoable edit', asyn
   assert.equal(state.logs.length, 1);
 });
 
+test('freshness is checked again after asynchronously revealing the captured source', async () => {
+  state.onReveal = () => state.document.version++;
+  const run = start(); await settle(); await accept(); await run;
+  assert.equal(state.edits.length, 0);
+  assert.equal(state.logs.length, 0);
+  await api.copyResult(); assert.deepEqual(state.clipboard, [response.rewritten]);
+});
+
 test('failed edit is not announced as success and retains the exact composed result', async () => {
   state.applied = false; const run = start(); await settle();
   await accept('Partially clear prose.'); await run;
@@ -295,5 +309,5 @@ test('failed explicit regeneration retains prior result and request metadata', a
   }
   api.disposeWorkflow();
   delete globalThis.__deslopWorkflowMocks;
-  console.log(`${tests.length} deterministic workflow checks passed. Native editor/browser/undo behavior remains unverified.`);
+  console.log(`${tests.length} deterministic workflow checks passed. These mocks do not establish native editor/browser/undo behavior.`);
 })().catch(error => { console.error(error); process.exitCode = 1; });

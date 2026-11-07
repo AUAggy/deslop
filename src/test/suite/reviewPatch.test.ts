@@ -85,6 +85,22 @@ suite('deterministic review composition', () => {
     assert.match(patch.groups[0].reason!, /Line-boundary/);
   });
 
+  test('multiline link, emphasis, reference and HTML delimiter changes cannot form broken subsets', () => {
+    const cases = [
+      ['[Old label\nanchor\n](https://example.com)\n', 'New label\nanchor\n(plain note)\n'],
+      ['*old\nanchor\nend*\n', 'new\nanchor\nend\n'],
+      ['_old\nanchor\nend_\n', 'new\nanchor\nend\n'],
+      ['[old][ref]\nanchor\n[ref]: https://example.com\n', 'new\nanchor\nplain note\n'],
+      ['<strong>old\nanchor\nend</strong>\n', 'new\nanchor\nend\n'],
+    ];
+    for (const [original, rewritten] of cases) {
+      const patch = createReviewPatch(original, rewritten);
+      assert.strictEqual(patch.groups.length, 1);
+      assert.strictEqual(composeReviewPatch(patch, []).text, original);
+      assert.strictEqual(composeReviewPatch(patch, ['group-1']).text, rewritten);
+    }
+  });
+
   test('invalid protected composition is blocked rather than repaired', () => {
     const original = 'Keep `code` and `code`.';
     const patch = createReviewPatch(original, 'Keep `code`.');
@@ -102,6 +118,7 @@ suite('deterministic review composition', () => {
     assert.strictEqual(partial.text, 'bad\u200b\nanchor\nnew');
     assert.strictEqual(partial.issues.length, 1);
     assert.match(partial.issues[0], /cleanup/);
+    assert.match(partial.issues[0], /Excluded cleanup groups: group-1/);
     assert.deepStrictEqual(composeReviewPatch(patch, patch.groups.map(g => g.id)).issues, []);
     assert.strictEqual(composeReviewPatch(patch, []).text, original);
   });

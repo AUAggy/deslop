@@ -40,6 +40,8 @@ function harness() {
   let clipboard = '';
   let failOpen = false;
   let diffCalls = 0;
+  let delayed = false;
+  const models = new Map<string, string>();
   const api = {
     Uri, TabInputTextDiff: TabDiff, EventEmitter: Emitter,
     StatusBarAlignment: { Left: 1 }, ThemeIcon: class { constructor(readonly id: string) {} },
@@ -54,6 +56,9 @@ function harness() {
         if (id === 'vscode.diff') {
           diffCalls++;
           if (failOpen) { throw new Error('mock editor failure'); }
+          for (const uri of [args[0], args[1]]) {
+            if (!models.has(uri.toString())) { models.set(uri.toString(), providers.get('deslop-review').provideTextDocumentContent(uri)); }
+          }
           const existing = group.tabs.find(tab => tab.input.original.toString() === args[0].toString() && tab.input.modified.toString() === args[1].toString());
           const tab = existing ?? { input: new TabDiff(args[0], args[1]), label: args[2] };
           if (!existing) { group.tabs.push(tab); }
@@ -65,8 +70,13 @@ function harness() {
       },
     },
     workspace: {
+      get textDocuments() { return [...models.keys()].map(uri => ({ uri: Uri.parse(uri), getText: () => models.get(uri)! })); },
+      onDidChangeTextDocument: new Emitter<any>().event,
       registerTextDocumentContentProvider(scheme: string, provider: unknown) {
         providers.set(scheme, provider);
+        (provider as any).onDidChange((uri: Uri) => {
+          if (!delayed && models.has(uri.toString())) { models.set(uri.toString(), (provider as any).provideTextDocumentContent(uri)); }
+        });
         return { dispose: () => providers.delete(scheme) };
       },
     },
@@ -131,8 +141,11 @@ function harness() {
     get clipboard() { return clipboard; }, get diffCalls() { return diffCalls; },
     getPreview: () => providers.get('deslop-review').provideTextDocumentContent(group.tabs.find(tab => tab.input.modified.toString().includes('selected-read-only')).input.modified),
     close: () => api.window.tabGroups.close(group.tabs.find(tab => tab.input.modified.toString().includes('selected-read-only'))),
+    closeGroupOnly: () => { group.tabs = []; group.activeTab = undefined; changedGroups.fire(undefined); },
     switchAway: () => { group.activeTab = { input: {} }; changedTabs.fire({ closed: [], opened: [], changed: [] }); },
     failNextOpen: () => { failOpen = true; },
+    delayUpdates: () => { delayed = true; },
+    acknowledge: () => { for (const uri of models.keys()) { models.set(uri, providers.get('deslop-review').provideTextDocumentContent(Uri.parse(uri))); } },
     dispose: () => { for (const subscription of [...subscriptions].reverse()) { subscription.dispose(); } },
     loadChangelog: () => load(require.resolve('../../ui/changelog')) as typeof import('../../ui/changelog'),
   };
@@ -185,6 +198,28 @@ suite('review UI lifecycle — public API fakes', () => {
     await h.run('applySelected');
     await h.review.returnToReview();
     assert.strictEqual(h.group.tabs.length, 0);
+    h.dispose();
+  });
+
+  test('group-only closure without a tab-closed event still settles review', async () => {
+    const h = harness();
+    const pending = h.review.showReview(request);
+    await h.review.returnToReview();
+    h.closeGroupOnly();
+    assert.deepStrictEqual(await pending, { kind: 'discard' });
+    h.dispose();
+  });
+
+  test('failed picker return is handled and retains safe recovery actions', async () => {
+    const h = harness();
+    const pending = h.review.showReview(request);
+    await h.run('selectGroups');
+    h.failNextOpen();
+    h.pickers[0].accept.fire(undefined);
+    await Promise.resolve(); await Promise.resolve();
+    assert.ok(h.warnings.some(message => /could not be reopened/.test(message)));
+    h.review.cancelReview();
+    await pending;
     h.dispose();
   });
 
@@ -241,6 +276,40 @@ suite('review UI lifecycle — public API fakes', () => {
     pending = h.review.showReview(request);
     h.dispose();
     assert.deepStrictEqual(await pending, { kind: 'discard' });
+  });
+
+  test('rapid selection then apply cannot outrun the native preview model', async () => {
+    const h = harness();
+    const pending = h.review.showReview(request);
+    await Promise.resolve();
+    h.delayUpdates();
+    await h.run('selectNone');
+    await h.run('applySelected');
+    assert.strictEqual(h.contexts.get('deslop.reviewAvailable'), true);
+    assert.ok(h.warnings.length > 0);
+    h.acknowledge();
+    await h.run('applySelected');
+    const result = await pending;
+    assert.strictEqual(result.kind, 'apply');
+    if (result.kind === 'apply') { assert.strictEqual(result.text, request.original); }
+    h.dispose();
+  });
+
+  test('accept-all after a subset waits for its exact updated native preview', async () => {
+    const h = harness();
+    const pending = h.review.showReview(request);
+    await Promise.resolve();
+    await h.run('selectNone');
+    h.delayUpdates();
+    await h.run('acceptAll');
+    assert.strictEqual(h.contexts.get('deslop.reviewAvailable'), true);
+    assert.ok(h.warnings.some(message => /not yet identical/.test(message)));
+    h.acknowledge();
+    await h.run('applySelected');
+    const result = await pending;
+    assert.strictEqual(result.kind, 'apply');
+    if (result.kind === 'apply') { assert.strictEqual(result.text, request.rewritten); }
+    h.dispose();
   });
 
   test('invalid subset cannot change preview or silently clean excluded source', async () => {

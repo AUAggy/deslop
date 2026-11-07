@@ -50,7 +50,8 @@ export function registerReviewCommands(context: vscode.ExtensionContext): void {
         await session.open();
         return;
       }
-      await session.command(action);
+      try { await session.command(action); }
+      catch { void vscode.window.showWarningMessage('The review action could not complete. Return to Review, copy the completed result, or discard. Source text was not changed.'); }
     }));
   }
   context.subscriptions.push({ dispose: () => {
@@ -79,7 +80,10 @@ export async function showReview(request: ReviewRequest): Promise<ReviewResult> 
   return session.result;
 }
 
-export async function returnToReview(): Promise<void> { await active?.open(); }
+export async function returnToReview(): Promise<void> {
+  try { await active?.open(); }
+  catch { void vscode.window.showWarningMessage('Review could not be reopened. The completed result is still available to copy or discard.'); }
+}
 export function cancelReview(): void { active?.finish({ kind: 'discard' }); }
 export function disposeReview(): void { cancelReview(); }
 
@@ -101,9 +105,11 @@ class ReviewSession {
   private composition: Composition;
   private selected: Set<string>;
   private disposed = false;
+  private opened = false;
   private readonly subscriptions: vscode.Disposable[] = [];
   private picker: vscode.QuickPick<vscode.QuickPickItem & { id: string }> | undefined;
   private status: vscode.StatusBarItem[] = [];
+  private restoring = new Map<string, string>();
 
   private readonly request: ReviewRequest;
 
@@ -132,17 +138,39 @@ class ReviewSession {
       const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
       item.text = text;
       item.command = { command: `deslop.review.${action}`, title: text, arguments: [this.id] };
-      item.tooltip = 'DeSlop: read-only review; source is unchanged until application';
+      item.tooltip = this.patch.groups.length === 1 && this.patch.groups[0].reason
+        ? `One coarse whole-rewrite group: ${this.patch.groups[0].reason}`
+        : 'DeSlop: read-only review; source is unchanged until application';
       this.status.push(item);
       this.subscriptions.push(item);
     }
+    // Virtual documents are read-only in the editor UI, but other extensions can
+    // still submit WorkspaceEdits. Restore our authoritative composed preview.
+    this.subscriptions.push(vscode.workspace.onDidChangeTextDocument(event => {
+      const expected = contents.get(event.document.uri.toString());
+      if (!this.disposed && expected !== undefined) {
+        if (event.document.getText() === expected) { this.restoring.delete(event.document.uri.toString()); }
+        else { this.refreshPreview(event.document); }
+      }
+    }));
     this.subscriptions.push(vscode.window.tabGroups.onDidChangeTabs(event => {
+      // Ownership policy: closing any composed review view discards the session,
+      // including duplicate views in other groups. No source is changed.
       if (event.closed.some(tab => this.isComposedTab(tab))) {
         this.finish({ kind: 'discard' });
       } else { this.updateContext(); }
-    }), vscode.window.tabGroups.onDidChangeTabGroups(() => this.updateContext()),
+    }), vscode.window.tabGroups.onDidChangeTabGroups(() => {
+      if (this.opened && !vscode.window.tabGroups.all.some(group => group.tabs.some(tab => this.isComposedTab(tab)))) {
+        this.finish({ kind: 'discard' });
+      } else { this.updateContext(); }
+    }),
     vscode.window.onDidChangeActiveTextEditor(() => this.updateContext()));
+    this.updateSelectionLabel();
     this.updateContext();
+  }
+
+  private updateSelectionLabel(): void {
+    if (this.status[0]) { this.status[0].text = `$(check) Apply selected (${this.selected.size}/${this.patch.groups.length} groups)`; }
   }
 
   private isComposedTab(tab: vscode.Tab): boolean {
@@ -175,9 +203,9 @@ class ReviewSession {
   async open(full = false): Promise<void> {
     if (this.disposed) { return; }
     await vscode.commands.executeCommand('vscode.diff', this.originalUri, full ? this.fullUri : this.composedUri,
-      `DeSlop: ${full ? 'Full proposal' : 'Selected changes'} (read-only) — ${metadataLabel(this.request.metadata)}`,
+      `DeSlop: ${full ? 'Full proposal' : 'Selected changes'} (read-only; ${this.patch.groups.length} ${this.patch.groups.length === 1 && this.patch.groups[0].reason ? 'coarse whole-rewrite group' : 'groups'}) — ${metadataLabel(this.request.metadata)}`,
       { preview: false });
-    if (this.disposed) { await this.closeTabs(); } else { this.updateContext(); }
+    if (this.disposed) { await this.closeTabs(); } else { this.opened = true; this.updateContext(); }
   }
 
   private setSelection(ids: Iterable<string>): boolean {
@@ -190,13 +218,44 @@ class ReviewSession {
     }
     this.selected = selected;
     this.composition = next;
+    this.updateSelectionLabel();
     contents.set(this.composedUri.toString(), next.text);
     changed?.fire(this.composedUri);
     return true;
   }
 
+  private refreshPreview(document: vscode.TextDocument): void {
+    const uri = document.uri.toString();
+    const expected = contents.get(uri);
+    // A native model can normalise mixed EOLs. Refresh once per expected text,
+    // then fail closed rather than creating an endless refresh/change loop.
+    if (expected !== undefined && this.restoring.get(uri) !== expected) {
+      this.restoring.set(uri, expected);
+      changed?.fire(document.uri);
+    }
+  }
+
+  private exactPreview(text: string): boolean {
+    const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === this.composedUri.toString());
+    if (document?.getText() === text) { return true; }
+    if (document) { this.refreshPreview(document); }
+    void vscode.window.showWarningMessage('The native preview is not yet identical to the selected result. Inspect the refreshed review and try again. If it remains unavailable (for example, mixed line endings), copy the completed result or discard; nothing was applied.');
+    return false;
+  }
+
   async command(action: ReviewAction): Promise<void> {
     if (this.disposed) { return; }
+    if (action !== 'discard') {
+      const altered = vscode.workspace.textDocuments.filter(document => {
+        const expected = contents.get(document.uri.toString());
+        return expected !== undefined && document.getText() !== expected;
+      });
+      if (altered.length) {
+        for (const document of altered) { this.refreshPreview(document); }
+        void vscode.window.showWarningMessage('The read-only review was changed externally. Its preview is being restored; inspect it before choosing an action.');
+        return;
+      }
+    }
     switch (action) {
       case 'applySelected':
       case 'acceptAll': {
@@ -207,6 +266,7 @@ class ReviewSession {
           void vscode.window.showWarningMessage(`Cannot apply this selection: ${final.issues.join('; ')}`);
           return;
         }
+        if (!this.exactPreview(final.text)) { return; }
         this.finish({ kind: 'apply', text: final.text, summary: final.summary });
         return;
       }
@@ -239,8 +299,8 @@ class ReviewSession {
     picker.items = this.patch.groups.map((group, i) => ({
       id: group.id,
       label: `Change ${i + 1} — original line ${1 + this.request.original.slice(0, group.start).split('\n').length - 1}`,
-      description: group.reason ?? 'Independent line group',
-      detail: `Before: ${snippet(group.before)} → After: ${snippet(group.after)}`,
+      description: group.reason ?? 'Text change group',
+      detail: `Before: ${snippet(group.before, group.after)} → After: ${snippet(group.after, group.before)}`,
     }));
     this.syncPicker();
     const listeners = [
@@ -251,7 +311,9 @@ class ReviewSession {
         this.setSelection(button === all ? this.patch.groups.map(g => g.id) : []);
         this.syncPicker();
       }),
-      picker.onDidAccept(() => { picker.hide(); void this.open(); }),
+      picker.onDidAccept(() => { picker.hide(); void this.open().catch(() => {
+        void vscode.window.showWarningMessage('Review could not be reopened. Use Return to Review, copy the completed result, or discard.');
+      }); }),
       picker.onDidHide(() => {
         for (const listener of listeners) { listener.dispose(); }
         picker.dispose();
@@ -286,10 +348,15 @@ class ReviewSession {
   }
 }
 
-function snippet(text: string): string {
+function snippet(text: string, other: string): string {
   if (!text) { return '(empty)'; }
-  const points = Array.from(text.replace(/\r/g, '\\r').replace(/\n/g, ' ↵ '));
-  return points.slice(0, 220).join('') + (points.length > 220 ? '… (inspect diff for complete text)' : '');
+  const points = Array.from(text);
+  const comparison = Array.from(other);
+  let prefix = 0;
+  while (prefix < Math.min(points.length, comparison.length) && points[prefix] === comparison[prefix]) { prefix++; }
+  const start = Math.max(0, prefix - 60);
+  const excerpt = points.slice(start, start + 220).join('').replace(/\r/g, '\\r').replace(/\n/g, ' ↵ ');
+  return (start ? '… ' : '') + excerpt + (start + 220 < points.length ? '… (inspect diff for complete text)' : '');
 }
 
 function metadataLabel(metadata?: ReviewMetadata): string {

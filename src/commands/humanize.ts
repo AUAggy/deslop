@@ -15,7 +15,6 @@ import type { DocumentType, HumanizeResponse } from '../types';
 
 interface RequestSnapshot {
   readonly document: vscode.TextDocument;
-  readonly editor: vscode.TextEditor;
   readonly range: vscode.Range;
   readonly text: string;
   readonly version: number;
@@ -131,7 +130,7 @@ export async function humanizeSelection(context: vscode.ExtensionContext): Promi
     const documentType = resolution.type ?? await pickType(context, true, () => op.owns(token));
     if (!op.owns(token)) { return; }
     if (!documentType) { finish(op, 'cancelled'); return; }
-    op.capture({ document, editor, range, text, version, documentType, provider, model,
+    op.capture({ document, range, text, version, documentType, provider, model,
       preferences, preferenceInstructions: buildPreferenceInstructions(preferences), ...consent });
     await requestRewrite(op, context);
   } catch {
@@ -268,9 +267,13 @@ async function applyResult(op: Operation, text: string, summary?: AppliedSelecti
   const token = op.begin('applying');
   let applied = false;
   try {
-    // TextEditor.edit checks document version and provides one logical undo step.
-    // No await occurs between the freshness check and submission of the edit.
-    applied = await s.editor.edit(builder => {
+    // A captured TextEditor can be disposed when a different file replaces its
+    // tab. Reveal ONLY the captured source, then recheck freshness after the await.
+    const editor = await vscode.window.showTextDocument(s.document, { preview: false });
+    if (!op.owns(token) || !fresh(s)) { throw new Error('Source changed'); }
+    // TextEditor.edit checks version and provides one logical undo step. No await
+    // occurs between the final freshness check and submission of the edit.
+    applied = await editor.edit(builder => {
       if (!fresh(s)) { throw new Error('Source changed'); }
       builder.replace(s.range, text);
     }, { undoStopBefore: true, undoStopAfter: true });

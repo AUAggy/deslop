@@ -104,7 +104,9 @@ function newlineCount(text: string): number {
 }
 
 function hasDependentStructure(text: string): boolean {
-  return collectProtectedRegions(text).length > 0 || /[`~]|^\s*(?:[-+*]\s|\d+[.)]\s|#{1,6}\s|>\s|---\s*$|\+\+\+\s*$|\|)/m.test(text);
+  // Without a Markdown parser, delimiter pairs (including multiline links,
+  // emphasis and HTML) cannot honestly be offered as independent line edits.
+  return collectProtectedRegions(text).length > 0 || /[`~*_<>]|\[|\]|^\s*(?:[-+]\s|\d+[.)]\s|#{1,6}\s|---\s*$|\+\+\+\s*$|\|)/m.test(text);
 }
 
 /** Always reconstruct from original offsets; selection order cannot affect text. */
@@ -127,6 +129,11 @@ export function composeReviewPatch(patch: ReviewPatch, selectedIds: Iterable<str
   const text = pieces.join('');
   // None means no edit, including no invisible-character cleanup of the source.
   const issues = ids.length === 0 ? [] : validateComposedText(patch.original, text);
+  const cleanupIssue = issues.findIndex(issue => issue.includes('requires output-integrity cleanup'));
+  if (cleanupIssue >= 0) {
+    const related = patch.groups.filter(group => !selected.has(group.id) && stripInvisible(group.before).text !== group.before).map(group => group.id);
+    if (related.length) { issues[cleanupIssue] += ` Excluded cleanup groups: ${related.join(', ')}. Include them explicitly or discard; no groups were added.`; }
+  }
   return {
     text,
     summary: {
