@@ -3,20 +3,24 @@ import OpenAI from 'openai';
 import { AUTH_LIFETIME_MS, PkceSession } from '../api/pkce';
 import { classifyProviderError, ProviderError } from '../api/errors';
 import { verifyAuthentication } from '../api/providers';
-import { setApiKey } from '../storage/secrets';
+import { setApiKey, beginCredentialIntent, type CredentialIntent } from '../storage/secrets';
 
 interface Pending {
   session: PkceSession;
   abort: AbortController;
+  intent: CredentialIntent;
   exchanging?: boolean;
   settle: (key: string | undefined) => void;
 }
 let extensionId: string | undefined;
+let secretStorage: vscode.SecretStorage | undefined;
 let pending: Pending | undefined;
 let connecting = false;
+let cancelConsent: (() => void) | undefined;
 
 export function registerConnectionHandlers(context: vscode.ExtensionContext): vscode.Disposable {
   extensionId = context.extension.id;
+  secretStorage = context.secrets;
   const handler = vscode.window.registerUriHandler({ handleUri: async uri => {
     const attempt = pending;
     if (!attempt) { return; }
@@ -24,17 +28,18 @@ export function registerConnectionHandlers(context: vscode.ExtensionContext): vs
     if (uri.scheme !== attempt.session.scheme || uri.authority !== attempt.session.authority || uri.path !== attempt.session.path) { return; }
     try {
       if (attempt.exchanging) { return; }
+      if (!attempt.intent.current()) { attempt.settle(undefined); return; }
       const fields = attempt.session.consume(uri);
       attempt.exchanging = true;
-      const client = new OpenAI({ apiKey: 'unused', baseURL: 'https://openrouter.ai/api/v1', maxRetries: 0 });
+      const client = new OpenAI({ apiKey: 'unused', baseURL: 'https://openrouter.ai/api/v1', maxRetries: 0, logLevel: 'off' });
       const result = await client.post<{ key?: unknown }>('/auth/keys', {
         body: fields, headers: { Authorization: null }, timeout: 15000, signal: attempt.abort.signal,
       });
       if (!result || typeof result.key !== 'string' || result.key.length > 4096 || !/^[\x21-\x7e]+$/.test(result.key)) { throw new ProviderError('malformed'); }
       await verifyAuthentication(result.key, 'openrouter', attempt.abort.signal);
       if (pending !== attempt || attempt.abort.signal.aborted) { return; }
-      // No asynchronous UI boundary between ownership check and SecretStorage submission.
-      await setApiKey(context.secrets, result.key, 'openrouter');
+      const saved = await setApiKey(context.secrets, result.key, 'openrouter', attempt.intent, () => attempt.abort.signal.aborted);
+      if (!saved) { attempt.settle(undefined); return; }
       if (pending === attempt) {
         void vscode.window.showInformationMessage('OpenRouter key saved; authentication checked. Model access and available credit have not been tested.');
         attempt.settle(result.key);
@@ -48,24 +53,35 @@ export function registerConnectionHandlers(context: vscode.ExtensionContext): vs
   } });
   return new vscode.Disposable(() => {
     pending?.settle(undefined);
+    cancelConsent?.();
     extensionId = undefined;
+    secretStorage = undefined;
     handler.dispose();
   });
 }
 
 export async function connectOpenRouter(signal?: AbortSignal): Promise<string | undefined> {
   const authority = extensionId;
-  if (!authority || signal?.aborted || connecting) { return undefined; }
+  const secrets = secretStorage;
+  if (!authority || !secrets || signal?.aborted || connecting) { return undefined; }
   connecting = true; // Claim synchronously, including the consent dialog.
+  let stopConsent!: () => void;
+  const stopped = new Promise<undefined>(resolve => { stopConsent = () => resolve(undefined); });
+  cancelConsent = stopConsent;
+  signal?.addEventListener('abort', stopConsent, { once: true });
   try {
-  const consent = await vscode.window.showInformationMessage('Connect your OpenRouter account in the browser. You need an account and credits; OpenRouter bills your requests. No DeSlop backend is involved.', { modal: true }, 'Continue');
+  const consent = await Promise.race([
+    vscode.window.showInformationMessage('Connect your OpenRouter account in the browser. You need an account and credits; OpenRouter bills your requests. No DeSlop backend is involved.', { modal: true }, 'Continue'),
+    stopped,
+  ]);
   if (consent !== 'Continue' || signal?.aborted || extensionId !== authority) { return undefined; }
   return await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Waiting for OpenRouter. Cancel to use manual key entry.', cancellable: true }, async (_progress, token) => {
     const session = new PkceSession(vscode.env.uriScheme, authority);
     const abort = new AbortController();
     let resolve!: (key: string | undefined) => void;
     const result = new Promise<string | undefined>(r => { resolve = r; });
-    const attempt: Pending = { session, abort, settle: key => {
+    const intent = beginCredentialIntent(secrets, 'openrouter');
+    const attempt: Pending = { session, abort, intent, settle: key => {
       if (pending !== attempt) { return; }
       pending = undefined;
       session.cancel(); abort.abort(); resolve(key);
@@ -77,9 +93,16 @@ export async function connectOpenRouter(signal?: AbortSignal): Promise<string | 
     signal?.addEventListener('abort', cancel, { once: true });
     try {
       const callback = vscode.Uri.from({ scheme: session.scheme, authority: session.authority, path: session.path });
-      const external = await vscode.env.asExternalUri(callback);
-      if (pending !== attempt || signal?.aborted || token.isCancellationRequested) { attempt.settle(undefined); return undefined; }
-      const opened = await vscode.env.openExternal(vscode.Uri.parse(session.authorizationUrl(external.toString())));
+      const routed = await Promise.race([
+        vscode.env.asExternalUri(callback).then(external => ({ external })),
+        result.then(() => undefined),
+      ]);
+      if (!routed) { return await result; }
+      if (pending !== attempt || signal?.aborted || token.isCancellationRequested || !intent.current()) { attempt.settle(undefined); return undefined; }
+      const opened = await Promise.race([
+        vscode.env.openExternal(vscode.Uri.parse(session.authorizationUrl(routed.external.toString()))),
+        result.then(() => undefined),
+      ]);
       if (!opened) { attempt.settle(undefined); }
       return await result;
     } catch {
@@ -89,5 +112,9 @@ export async function connectOpenRouter(signal?: AbortSignal): Promise<string | 
       clearTimeout(timer); cancellation.dispose(); signal?.removeEventListener('abort', cancel);
     }
   });
-  } finally { connecting = false; }
+  } finally {
+    signal?.removeEventListener('abort', stopConsent);
+    if (cancelConsent === stopConsent) { cancelConsent = undefined; }
+    connecting = false;
+  }
 }

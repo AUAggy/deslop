@@ -74,6 +74,7 @@ export async function callHumanize(
     baseURL: provider.baseURL,
     defaultHeaders: provider.defaultHeaders,
     maxRetries: 0,
+    logLevel: 'off', // Never inherit OPENAI_LOG: request bodies and keys are private.
   });
 
   const instructions = options.preferenceInstructions ?? '';
@@ -95,7 +96,7 @@ export async function callHumanize(
     { timeout: HUMANIZE_TIMEOUT_MS, signal: options.signal }
   );
 
-  const raw = response.choices[0]?.message?.content;
+  const raw = completionText(response);
   if (!raw) {
     throw new ProviderError('malformed');
   }
@@ -156,8 +157,17 @@ export function sanitiseChanges(raw: unknown[]): { pattern: string; action: stri
   );
 }
 
+function completionText(response: unknown): string {
+  if (!response || typeof response !== 'object') { throw new ProviderError('malformed'); }
+  const choices = (response as { choices?: unknown }).choices;
+  if (!Array.isArray(choices)) { throw new ProviderError('malformed'); }
+  const content = choices[0]?.message?.content;
+  if (typeof content !== 'string' || !content.trim()) { throw new ProviderError('malformed'); }
+  return content;
+}
+
 export async function verifyAuthentication(apiKey: string, provider: Provider, signal?: AbortSignal): Promise<void> {
-  const client = new OpenAI({ apiKey, baseURL: PROVIDER_CONFIG[provider].baseURL, maxRetries: 0 });
+  const client = new OpenAI({ apiKey, baseURL: PROVIDER_CONFIG[provider].baseURL, maxRetries: 0, logLevel: 'off' });
   try {
     // These authenticated metadata endpoints make no completion request.
     const response = await client.get<{ data?: unknown }>(provider === 'openrouter' ? '/key' : '/api_keys/rate_limits', { timeout: 10000, signal });
@@ -166,9 +176,10 @@ export async function verifyAuthentication(apiKey: string, provider: Provider, s
 }
 
 export async function testModelReadiness(apiKey: string, options: RequestOptions): Promise<void> {
-  const client = new OpenAI({ apiKey, baseURL: PROVIDER_CONFIG[options.provider].baseURL, maxRetries: 0 });
+  const client = new OpenAI({ apiKey, baseURL: PROVIDER_CONFIG[options.provider].baseURL, maxRetries: 0, logLevel: 'off' });
   try {
-    await client.chat.completions.create({ model: options.model, max_tokens: 16, messages: [{ role: 'user', content: 'Reply OK.' }] }, { timeout: 10000, signal: options.signal });
+    const response = await client.chat.completions.create({ model: options.model, max_tokens: 16, messages: [{ role: 'user', content: 'Reply OK.' }] }, { timeout: 10000, signal: options.signal });
+    completionText(response);
   } catch (error) { throw classifyProviderError(error); }
 }
 

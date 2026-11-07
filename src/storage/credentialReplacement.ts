@@ -7,7 +7,7 @@ export async function replaceCredential(
   provider: Provider,
   dependencies: {
     verify: (key: string, provider: Provider) => Promise<void>;
-    save: (key: string, provider: Provider) => Promise<void>;
+    save: (key: string, provider: Provider) => Promise<void | boolean>;
     cancelled: () => boolean;
   }
 ): Promise<ReplacementResult> {
@@ -16,7 +16,9 @@ export async function replaceCredential(
   catch { return dependencies.cancelled() ? 'cancelled' : 'verification-failed'; }
   if (dependencies.cancelled()) { return 'cancelled'; }
   // Once submitted, SecretStorage.store cannot be aborted or reliably rolled back.
-  try { await dependencies.save(candidate, provider); }
-  catch { return 'storage-uncertain'; }
+  try {
+    const saved = await dependencies.save(candidate, provider);
+    if (saved === false || dependencies.cancelled()) { return 'cancelled'; }
+  } catch { return 'storage-uncertain'; }
   return 'saved';
 }
