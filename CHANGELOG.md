@@ -2,9 +2,9 @@
 
 ## Unreleased (feature testing)
 
-**Browser connection removed; API keys are the only way to connect.** Live testing found the browser authorisation flow unreliable, and it has been removed entirely: no OAuth/PKCE, no callback handling, no Connect OpenRouter action. First use and Manage Connection now offer Enter Key (paste a key; it is verified before replacing the stored one) and Get Key (opens your provider's account page). Stored keys are never wiped by this change — only Disconnect, after confirmation, removes one.
+**Browser connection removed; API keys are the only way to connect.** Live testing found the browser authorisation flow unreliable, and it has been removed entirely: no OAuth/PKCE, no callback handling, no Connect OpenRouter action. First use now offers Enter Key (paste a key; it is verified before replacing the stored one) and Get Key (opens your provider's account page); Manage Connection offers Enter/Replace Key, authentication and model tests, Open Provider Account and Disconnect. Stored keys are never wiped by this change — only Disconnect, after confirmation, removes one.
 
-**Also in this feature preview, not yet released:** review changes in groups and apply only the ones you accept; optional editorial preferences for punctuation style and paragraph/list organisation; document-type detection and defaults; per-provider model defaults; and non-destructive key replacement and disconnect.
+**Also in this feature preview, not yet released:** review changes in groups and apply only the ones you accept; optional editorial preferences for punctuation style and paragraph/list organisation; document-type detection and defaults; and non-destructive key replacement and disconnect.
 
 ## v0.1.9 -- 2026-10-30
 
