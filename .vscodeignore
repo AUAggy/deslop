@@ -22,3 +22,4 @@ CODE-DESLOP-ANALYSIS.md
 pnpm-lock.yaml
 pnpm-workspace.yaml
 scripts/**
+evaluation/**

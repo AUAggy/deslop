@@ -1,162 +1,117 @@
 <p align="center">
-  <img src="images/icon.png" width="96" alt="DeSlop">
+  <img src="https://raw.githubusercontent.com/AUAggy/deslop/main/images/icon.png" width="96" alt="DeSlop">
 </p>
 
-<h1 align="center">DeSlop</h1>
+<h1 align="center">DeSlop: AI Slop Remover for VS Code</h1>
 
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=AUAggy.deslop"><img src="https://img.shields.io/visual-studio-marketplace/v/AUAggy.deslop?label=VS%20Code&color=0078d4" alt="VS Code Marketplace"></a>
-  <a href="https://open-vsx.org/extension/AUAggy/deslop"><img src="https://img.shields.io/open-vsx/v/AUAggy/deslop?label=Open%20VSX&color=c160ef" alt="Open VSX"></a>
-  <a href="https://github.com/AUAggy/deslop/releases"><img src="https://img.shields.io/github/v/release/AUAggy/deslop?label=Release&color=e53e3e" alt="GitHub Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/AUAggy/deslop?color=555" alt="MIT License"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=AUAggy.deslop">VS Code Marketplace</a> ·
+  <a href="https://open-vsx.org/extension/AUAggy/deslop">Open VSX / VSCodium</a> ·
+  <a href="https://github.com/AUAggy/deslop/releases">Download VSIX</a>
 </p>
+
+Remove AI filler from Markdown, READMEs, comments, commit messages and articles without leaving your editor. DeSlop rewrites your selection, shows a native diff, and lets you apply only the changes you choose.
+
+Use your own **OpenRouter or Venice API key** and choose your model. No DeSlop account. Provider usage is billed to you.
+
+Over **4,000 downloads** across the VS Code Marketplace and Open VSX.
 
 <p align="center">
-  <a href="#getting-started">Install</a> &bull;
-  <a href="#what-it-does">What it does</a> &bull;
-  <a href="#what-it-removes">What it removes</a> &bull;
-  <a href="#settings">Settings</a> &bull;
-  <a href="#privacy">Privacy</a>
+  <a href="#getting-started">Get started</a> ·
+  <a href="#review-and-choose-your-edits">Review controls</a> ·
+  <a href="#settings">Settings</a> ·
+  <a href="#privacy-and-costs">Privacy</a>
 </p>
 
----
+> Next-release preview: this branch documents the tested feature build, not the currently published extension. See the [release notes](https://github.com/AUAggy/deslop/releases) for published versions.
 
-Your AI assistant writes documentation the way a nervous intern writes a performance review: inflated, hedged, and padded with words that sound important but carry no information. "Leverage synergies." "Foster innovation." "Seamlessly facilitate a paradigm shift."
+## Cut the filler, keep the point
 
-DeSlop fixes that. Select the text, run the command, review the diff, accept or discard. The result reads like a person wrote it, specifically a person who knows what they are talking about and has no patience for filler.
+DeSlop targets padded lead-ins, repeated claims, hype and canned phrasing. It edits existing prose rather than supplying missing evidence or facts.
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/AUAggy/deslop/main/images/deslop-before-after.png" alt="DeSlop before and after comparison" style="max-width: 100%;">
-</p>
+**Before**
 
----
+> It is worth noting that Parcelnote provides users with the ability to search release notes in a local folder.
 
-## What it does
+**After**
 
-DeSlop sends your selected prose to an AI model with a strict ruleset that bans the exact patterns AI models produce. It returns a rewrite and a structured list of every change made and why. You review the diff in VS Code's native diff view, then click Accept or Discard in the status bar at your own pace.
+> Parcelnote searches release notes in a local folder.
 
-It does not generate new content. It does not check grammar. It rewrites what you already wrote, or what your AI assistant wrote for you, to meet a higher standard.
+Illustrative edit, not a recorded model output. Results depend on your model and source text.
 
----
+![Illustrative README rewrite: AI filler removed without adding claims](images/deslop-before-after.png)
 
-## Features
-
-- **DeSlop Selection**: one command, available in the command palette and right-click context menu
-- **Four document types**: README, Docstring/Comment, Commit Message, Blog/Article. Each applies a different set of style constraints.
-- **Smart doc type inference**: when you select a comment or docstring in a source file, DeSlop skips the prompt and applies the Docstring/Comment rules automatically.
-- **Full docstring support**: Python `"""` and `'''` blocks, PowerShell `<# ... #>` blocks, JSDoc, `//` comments, and language-aware `#` comments. Interior lines of multi-line docstrings are handled correctly.
-- **Code region preservation**: content inside triple-backtick fences, inline code spans, and YAML frontmatter is never modified, regardless of what surrounds it.
-- **Diff view**: side-by-side comparison before any text is changed
-- **Status bar Accept/Discard**: persistent buttons so you can read the full diff before deciding
-- **Changes panel**: structured list of every rule violated, shown in the Output panel after each accepted rewrite
-- **Status bar indicator**: shows inference is running; disappears when done
-- **Configurable model**: defaults to DeepSeek V4 Flash on both providers; swap to any model you trust
-
----
-
-## What it removes
-
-**Banned vocabulary** -- words that appear in AI output at rates that would embarrass a thesaurus:
-
-`delve` `leverage` `tapestry` `spearhead` `paradigm shift` `robust` `seamless` `synergy` `ecosystem` `holistic` `scalable` `utilize` `facilitate` `empower` `disruptive` `groundbreaking` `transformative` `innovative` `cutting-edge` `orchestrate` `curate` `cultivate` `democratize` `reimagine` `unleash` `harness` `supercharge` `north star` `mission-critical` `best-in-class` `thought leadership` `low-hanging fruit` `move the needle` `circle back` `double-click` `learnings` and 40 more
-
-**Padding phrases** -- sentences that exist to delay the actual point:
-
-`"it's worth noting"` `"essentially"` `"needless to say"` `"without further ado"` `"as you may know"` `"feel free to"` `"I'm excited to share"` `"as per"` and more
-
-**Cliche structures** -- formats that signal AI authorship before the reader reads a word:
-
-- `Question? Answer.` sentence pairs
-- `"In a world where..."` openers
-- `"This isn't X. It's Y."` contrasts
-- `"Whether you're a X or a Y..."` appeals
-- `"The future of X is here"`
-- Anthropomorphism applied to code
-
-**Decorative emojis** -- the ones that add energy but no information:
-
-🚀 ✨ 🔥 ⚡ ✅ 🙌 💎 👉 🧠 ⭐ 🎉 🌍 📈 📣 🔒 🪄 🧵
-
-**Smart typography** introduced silently by LLMs: curly quotes `"` `"`, em-dashes `--`, en-dashes `-`, and ellipses `...` replaced with their plain equivalents.
-
----
-
-## Requirements
-
-An API key from one of the supported providers:
-
-**OpenRouter** (default): aggregates dozens of models under one key, including Grok, Claude, GPT, Llama, and more. No separate provider accounts required. Get a key at [openrouter.ai/keys](https://openrouter.ai/keys).
-
-**Venice**: privacy-focused inference. No data retention. Get a key at [venice.ai/settings/api](https://venice.ai/settings/api).
-
-The extension asks for a key on first use and stores it in your OS keychain via VS Code SecretStorage. It is never written to any file. Each provider stores its key separately; switching providers prompts for a new key if none is saved for that provider.
-
----
+Technical terms such as “robust estimator” and “critical section” are not filler. Useful qualifications, constraints and deliberate voice belong in the result. Already-clear text may need no changes.
 
 ## Getting started
 
-**VS Code:** Search "DeSlop" in the Extensions panel, or install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=AUAggy.deslop).
+Install **DeSlop** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=AUAggy.deslop) or [Open VSX for VSCodium](https://open-vsx.org/extension/AUAggy/deslop). For manual installation, download a release VSIX and run **Extensions: Install from VSIX…**.
 
-**VSCodium:** Search "DeSlop" in the Extensions panel (pulls from Open VSX Registry), or install from [Open VSX](https://open-vsx.org/extension/AUAggy/deslop).
+1. **Select prose**, then press **Shift+Alt+D** or run **DeSlop: DeSlop Selection**.
+2. Paste your provider's API key when prompted. **Get Key** opens [OpenRouter](https://openrouter.ai/keys) or [Venice](https://venice.ai/settings/api) so you can create one, then return to setup without reselecting text.
+3. Choose a document type if asked: **README**, **Docstring/Comment**, **Commit Message** or **Blog/Article**. Recognised README, comment and commit-message contexts can skip the picker; explicit defaults take precedence.
+4. Review the diff. Apply the full rewrite, choose change groups, or discard it. One **Undo** restores the original selection after application.
 
-**Manual install:** Download the `.vsix` from the [latest GitHub release](https://github.com/AUAggy/deslop/releases), then run `Extensions: Install from VSIX` from the command palette.
+A provider account, suitable model access, internet connection and any required credits are needed. API keys are the only connection method.
 
-Then:
-1. Run **DeSlop Selection** from the command palette
-2. Paste your API key when prompted
-3. Select text, run the command, pick a document type, review the diff
+## Review and choose your edits
 
----
+- **Select Change Groups** includes or excludes edits and updates the read-only preview. You can reveal a group's location from the picker. Changing the selection makes no new model request.
+- **Show Current Changes** opens the model's explanations before you decide. Explanations may be incomplete; inspect the text itself.
+- **Apply Selected Changes** applies the displayed result. **Accept Full Rewrite** takes every group; **Discard Rewrite** leaves the source untouched.
 
-## Commands
+Related edits may stay grouped to avoid splitting markup or protected content. Ambiguous blocks can form a larger group. Check the combined result: partial acceptance is not a guarantee that meaning survives.
 
-| Command | ID |
-|---|---|
-| DeSlop Selection | `deslop.humanizeSelection` |
+| Action | Windows / Linux | macOS |
+|---|---|---|
+| Rewrite selection | `Shift+Alt+D` | `Shift+Alt+D` |
+| Select change groups | `Ctrl+Alt+G` | `Cmd+Alt+G` |
+| Apply selected changes | `Ctrl+Alt+Enter` | `Cmd+Alt+Enter` |
+| Discard review | `Escape` | `Escape` |
 
-Available in the command palette and the editor right-click context menu when text is selected.
+Review shortcuts apply only while the associated review is active and the picker is closed. All actions are also in the Command Palette.
 
----
+## Your key, model and writing preferences
+
+**DeSlop: Manage Connection** lets you enter or replace a key, test authentication, open your provider account or disconnect. Each provider keeps its own credential. Cancelling or failing validation during replacement leaves the stored key intact; Disconnect removes it locally after confirmation, without revoking it at the provider.
+
+**DeSlop: Configure Editorial Preferences** offers two optional requests: preserve punctuation style and preserve paragraph/list structure. Both default off. They guide the model, not guarantee exact formatting. Changing preferences for a completed proposal requires explicit regeneration and another potentially billable request. DeSlop does not build a voice profile from your writing.
+
+Cancel inference when needed. Retry keeps your request choices. If the source changes or closes, DeSlop blocks stale application and offers **Copy Completed Result** so the rewrite is not lost. Pending results are lost on editor reload.
 
 ## Settings
 
-| Setting | Type | Default | Description |
-|---|---|---|---|
-| `deslop.provider` | enum | `openrouter` | `openrouter` or `venice` |
-| `deslop.model` | string | Provider-specific GPT-6 Luna | `openai/gpt-6-luna` on OpenRouter; `openai-gpt-6-luna` on Venice. Explicit settings take precedence. |
-| `deslop.defaultDocumentType` | enum | `null` | Pre-select doc type; null means always prompt |
-| `deslop.showChangeLog` | boolean | `true` | Show changes panel after each accepted rewrite. User-scope only. |
-| `deslop.autoAccept` | boolean | `false` | Skip diff view and apply immediately. User-scope only. |
+Open Settings and search for `deslop`.
 
-**Model IDs by provider:**
-- OpenRouter: `openai/gpt-6-luna`, `deepseek/deepseek-v4-flash-0731`, `anthropic/claude-sonnet-5`, and [hundreds more](https://openrouter.ai/models)
-- Venice: `openai-gpt-6-luna`, `deepseek-v4-flash-0731-fast`, `claude-sonnet-5`, and [more](https://docs.venice.ai/models/overview)
+| Setting | Default | Purpose |
+|---|---|---|
+| `deslop.provider` | `openrouter` | OpenRouter or Venice. |
+| `deslop.model` | Provider-specific | Unset: `openai/gpt-6-luna` on OpenRouter; `openai-gpt-6-luna` on Venice. Explicit overrides win. |
+| `deslop.defaultDocumentType` | `null` | Set a type; otherwise infer from context or ask. |
+| `deslop.rememberDocumentType` | `false` | Reuse the last picked type when no default or recognised context applies. |
+| `deslop.preservePunctuationStyle` | `false` | Ask the model to retain punctuation style. |
+| `deslop.preserveParagraphListStructure` | `false` | Ask it to retain paragraph and list organisation. |
+| `deslop.showChangeLog` | `false` | Open explanations after application. Explicit existing user choices are respected. |
+| `deslop.autoAccept` | `false` | Skip review and apply the full rewrite. Keep off for partial acceptance. |
 
----
+Review bypass, automatic explanations, editorial preferences and remembered type use user-level choices; workspace overrides cannot enable them. Without automatic reuse, the last document-type choice only reorders the picker.
 
-## Privacy
+## Privacy and costs
 
-Text submitted for rewriting goes to your chosen provider under your own API key. The extension does not store, log, or cache it. The provider's data retention policies apply.
+Selected text, editing instructions and enabled preferences go over HTTPS directly to your selected provider. There is no DeSlop inference server. Provider and upstream model-service policies apply; do not send text you would not share with them.
 
-The API key lives in your OS keychain. It does not appear in `settings.json`, logs, or anywhere a grep would find it.
+API keys use your editor's **SecretStorage**, not `settings.json`. DeSlop adds no telemetry and keeps pending reviews in memory rather than maintaining a writing history. Editor storage and clipboard behaviour are separate.
 
-**What leaves your machine.** The selected text and DeSlop's system prompt, sent over HTTPS to the provider you configured (OpenRouter or Venice). The provider -- and any gateway between you and it -- sees the full selection. Do not deslop text you would not send to that provider.
+You pay your provider for inference. Authentication checks do not request a completion; optional model-readiness tests do, with a charge warning first. Cancelling a request cannot guarantee the provider has not already incurred usage.
 
-**What does not leave.** Nothing else. No telemetry, no analytics, no update pings. The only network calls this extension makes are the rewrite request and API key validation. API keys are stored in VS Code SecretStorage; the extension never writes them to disk in plaintext.
+## Limits
 
-DeSlop rewrites prose; it does not audit documents for hidden provenance marks. If you need that, dedicated open-source tools exist, for example markscrub or watermarks-remover.
+- Prose selections only, up to **16,000 characters** (roughly 3,000 words). One active operation per extension host.
+- Protected-content checks cover recognised code fences, inline code and YAML/TOML frontmatter. They do not verify facts or prove meaning preservation. Check numbers, identifiers, conditions and negation before applying.
+- DeSlop edits for readers. It makes no AI-detector-evasion or “undetectable text” promise.
 
----
-
-## Limitations
-
-- Rewrites prose only. Code selections are rejected.
-- Maximum selection: approximately 3,000 words.
-- One command. No file-level rewrites, no inline triggers, no sidebar.
-- Requires an internet connection and an API key.
-
----
+For detailed grouping limits, editor compatibility and development checks, see [Testing](TESTING.md). The [editorial evaluation guide](evaluation/README.md) explains the corpus and review criteria; it is not a published quality benchmark.
 
 ## License
 
-MIT -- [Miaggy.com](https://miaggy.com)
+[MIT](LICENSE). [Report a bug or request a feature](https://github.com/AUAggy/deslop/issues).

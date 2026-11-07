@@ -29,6 +29,14 @@ const HASH_COMMENT_LANGUAGES = new Set([
   'yaml',
 ]);
 
+function isProseDocument(document: vscode.TextDocument): boolean {
+  const fileName = document.fileName;
+  const dotIndex = fileName.lastIndexOf('.');
+  const ext = dotIndex !== -1 ? fileName.slice(dotIndex).toLowerCase() : '';
+  return document.isUntitled || PROSE_EXTENSIONS.has(ext) ||
+    PROSE_FILENAMES.has(path.basename(fileName).toLowerCase());
+}
+
 type BlockDelim = '"""' | "'''" | '<#';
 
 /**
@@ -79,16 +87,7 @@ export async function isProseSelection(
   document: vscode.TextDocument,
   selection: vscode.Selection
 ): Promise<boolean> {
-  const fileName = document.fileName;
-  const dotIndex = fileName.lastIndexOf('.');
-  const ext = dotIndex !== -1 ? fileName.slice(dotIndex).toLowerCase() : '';
-
-  if (document.isUntitled || PROSE_EXTENSIONS.has(ext)) {
-    return true;
-  }
-
-  const baseName = path.basename(fileName).toLowerCase();
-  if (PROSE_FILENAMES.has(baseName)) {
+  if (isProseDocument(document)) {
     return true;
   }
 
@@ -155,20 +154,7 @@ export async function isCodeCommentSelection(
   document: vscode.TextDocument,
   selection: vscode.Selection
 ): Promise<boolean> {
-  if (document.isUntitled) {
-    return false;
-  }
-
-  const fileName = document.fileName;
-  const dotIndex = fileName.lastIndexOf('.');
-  const ext = dotIndex !== -1 ? fileName.slice(dotIndex).toLowerCase() : '';
-
-  if (PROSE_EXTENSIONS.has(ext)) {
-    return false;
-  }
-
-  const baseName = path.basename(fileName).toLowerCase();
-  if (PROSE_FILENAMES.has(baseName)) {
+  if (isProseDocument(document)) {
     return false;
   }
 
@@ -183,7 +169,6 @@ export function isCommentOrStringLine(trimmedLine: string, languageId?: string):
   if (trimmedLine.startsWith("'''")) { return true; }
   if (trimmedLine.startsWith('--')) { return true; }
   if (trimmedLine.startsWith('<!--')) { return true; }
-  if (trimmedLine.startsWith('//!')) { return true; }
   if (trimmedLine.startsWith('<#')) { return true; }
   if (trimmedLine.startsWith('#>')) { return true; }
   if (trimmedLine.startsWith('#')) {

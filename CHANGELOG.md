@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Choose which edits to keep.** Include or exclude change groups in a read-only diff, inspect the combined result, and apply it with one undoable edit. Related changes may stay grouped to protect markup and code.
+- **Read explanations before accepting.** Show Current Changes is available during review, alongside keyboard controls for group selection, application and discard. Explanations no longer open automatically for new users; existing explicit settings are respected.
+- **Keep more of your writing style.** Optional preferences ask the model to preserve punctuation or paragraph/list structure. Both default off; neither guarantees exact preservation.
+- **Manage keys without deleting a working connection first.** Manage Connection provides safe replacement, separate authentication and model tests, and confirmed disconnect. OpenRouter and Venice still use your own API keys; browser authorisation is not included.
+- **Recover without starting over.** Setup resumes the selected rewrite after key entry. Cancel inference, retry with the same choices, or copy a completed result if the source changes or closes. Closing review discards it; unchanged output skips review with “No changes needed”.
+- **Skip unnecessary document-type prompts.** Recognised README, comment and commit-message contexts can select a type automatically. An explicit default wins; reusing the last choice requires opt-in.
+
 ## v0.1.9 -- 2026-10-30
 
 **The default model is now GPT-6 Luna:** `openai/gpt-6-luna` on OpenRouter and `openai-gpt-6-luna` on Venice. If you set `deslop.model`, your value still applies. When it is unset, DeSlop uses the model ID of the provider you selected, for both rewrites and API-key validation. Before this, an unset model fell back to one global default, so a Venice key could be tested against an OpenRouter model ID.
