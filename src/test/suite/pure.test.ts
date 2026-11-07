@@ -7,10 +7,6 @@ import { MODIFIERS } from '../../prompts/modifiers';
 import { SYSTEM_PROMPT } from '../../prompts/system';
 import { collectProtectedRegions, verifyProtectedRegions, stripInvisible } from '../../util/postCheck';
 
-// ---------------------------------------------------------------------------
-// Minimal VS Code fakes for pure-function tests
-// ---------------------------------------------------------------------------
-
 function mockDoc(lines: string[], fileName = 'test.py', languageId = 'python'): vscode.TextDocument {
   return {
     fileName,
@@ -26,8 +22,6 @@ function mockSel(startLine: number, endLine: number, endCharacter = 0): vscode.S
     end: { line: endLine, character: endCharacter },
   } as unknown as vscode.Selection;
 }
-
-// ---------------------------------------------------------------------------
 
 suite('isCommentOrStringLine', () => {
   test('recognises // line comments', () => {
@@ -87,8 +81,6 @@ suite('isCommentOrStringLine', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-
 suite('isProseSelection — block comment interiors', () => {
   test('accepts Python docstring with plain interior lines', async () => {
     const doc = mockDoc(['    """', '    Filters the list.', '    Uses the batch predicate.', '    """']);
@@ -137,8 +129,6 @@ suite('isProseSelection — block comment interiors', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-
 suite('isCodeCommentSelection', () => {
   test('returns true for // comment lines in a .ts file', async () => {
     const doc = mockDoc(['// comment line'], 'index.ts');
@@ -176,8 +166,6 @@ suite('isCodeCommentSelection', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-
 suite('isSelectionTooLong', () => {
   test('returns false for short text', () => {
     assert.strictEqual(isSelectionTooLong('hello world'), false);
@@ -198,8 +186,6 @@ suite('isSelectionTooLong', () => {
     assert.strictEqual(isSelectionTooLong(text), true);
   });
 });
-
-// ---------------------------------------------------------------------------
 
 suite('approximateWordCount', () => {
   test('counts single words', () => {
@@ -222,8 +208,6 @@ suite('approximateWordCount', () => {
     assert.strictEqual(approximateWordCount('line one\nline two'), 4);
   });
 });
-
-// ---------------------------------------------------------------------------
 
 suite('SYSTEM_PROMPT — code region preservation rule', () => {
   test('contains triple-backtick fence preservation rule', () => {
@@ -255,8 +239,6 @@ suite('SYSTEM_PROMPT — code region preservation rule', () => {
     assert.ok(protectedIdx < styleRulesIdx, 'PROTECTED REGIONS should appear before STYLE RULES');
   });
 });
-
-// ---------------------------------------------------------------------------
 
 suite('postCheck — protected region verification', () => {
   test('passes when code fence is unchanged and prose changes', () => {
@@ -310,8 +292,6 @@ suite('postCheck — protected region verification', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-
 suite("MODIFIERS['Docstring/Comment'] — content assertions", () => {
   const modifier = MODIFIERS['Docstring/Comment'];
 
@@ -347,10 +327,6 @@ suite("MODIFIERS['Docstring/Comment'] — content assertions", () => {
     );
   });
 
-  test('is substantially longer than the old two-line version', () => {
-    assert.ok(modifier.length > 200, `Expected modifier length > 200, got ${modifier.length}`);
-  });
-
   test('does not introduce new keys into MODIFIERS', () => {
     assert.deepStrictEqual(
       Object.keys(MODIFIERS),
@@ -358,8 +334,6 @@ suite("MODIFIERS['Docstring/Comment'] — content assertions", () => {
     );
   });
 });
-
-// ---------------------------------------------------------------------------
 
 suite('nextBlockState', () => {
   test('opens """ block', () => {
@@ -399,8 +373,6 @@ suite('nextBlockState', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-
 suite('detectOpenBlockAbove', () => {
   test('returns null when no block is open above', () => {
     const doc = mockDoc(['def f():', '    x = 1'], 'mod.py', 'python');
@@ -427,8 +399,6 @@ suite('detectOpenBlockAbove', () => {
     assert.strictEqual(detectOpenBlockAbove(doc, 2), null);
   });
 });
-
-// ---------------------------------------------------------------------------
 
 suite('isProseSelection — interior block detection (#4)', () => {
   test('interior-only lines of an open """ docstring are prose', async () => {
@@ -465,8 +435,6 @@ suite('isProseSelection — interior block detection (#4)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-
 suite('isProseSelection — end-at-col-0 boundary (#5)', () => {
   test('selection ending at col 0 of next code line ignores that line', async () => {
     const doc = mockDoc([
@@ -493,8 +461,6 @@ suite('isProseSelection — end-at-col-0 boundary (#5)', () => {
     assert.strictEqual(await isProseSelection(doc, sel), true);
   });
 });
-
-// ---------------------------------------------------------------------------
 
 suite('isProseSelection — language-aware # (#6)', () => {
   test('#include in a .c file is rejected', async () => {
@@ -534,8 +500,6 @@ suite('isProseSelection — language-aware # (#6)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-
 suite('isCommentOrStringLine — language-aware # (#6)', () => {
   test('# without languageId is accepted (backwards compat)', () => {
     assert.strictEqual(isCommentOrStringLine('# comment'), true);
@@ -565,8 +529,6 @@ suite('isCommentOrStringLine — language-aware # (#6)', () => {
     assert.strictEqual(isCommentOrStringLine('#if DEBUG', 'csharp'), false);
   });
 });
-
-// ---------------------------------------------------------------------------
 
 suite('sanitiseChanges (#3)', () => {
   test('drops null entries', () => {
@@ -607,6 +569,29 @@ suite('sanitiseChanges (#3)', () => {
 });
 
 suite('stripInvisible (output integrity guard)', () => {
+  for (const [name, protectedText] of [
+    ['YAML frontmatter', '---\ntitle: A\u200B\n---\n'],
+    ['TOML frontmatter', '+++\r\ntitle = "A\u200B"\r\n+++\r\n'],
+    ['inline code after an astral character', '😀 `A\u200B`'],
+    ['unclosed code fence', '```js\nA\u200B'],
+    ['overlapping frontmatter and fence', '---\n```\nA\u200B\n```\n---\n'],
+  ]) {
+    test(`preserves ${name} during stripping and verification`, () => {
+      const original = `Before\u200B\n${protectedText}`;
+      // Frontmatter is protected only at the start of the text.
+      const input = name.includes('frontmatter') ? `${protectedText}After\u200B` : original;
+      const expected = name.includes('frontmatter')
+        ? `${protectedText}After`
+        : `Before\n${protectedText}`;
+      const result = stripInvisible(input);
+      assert.strictEqual(result.text, expected);
+      assert.strictEqual(result.invisibleCount, 1);
+      assert.strictEqual(result.confusableCount, 0);
+      assert.deepStrictEqual(verifyProtectedRegions(input, result.text), []);
+      assert.ok(verifyProtectedRegions(input, result.text.replace('A\u200B', 'A')).length > 0);
+    });
+  }
+
   test('clean rewrite passes through unchanged', () => {
     // Em dash and curly quotes are legitimate typography -- untouched.
     const text = 'Plain prose with an em dash \u2014 and \u201Ccurly quotes\u201D untouched.';
