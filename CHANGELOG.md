@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased (feature testing)
+
+**Browser connection removed; API keys are the only way to connect.** Live testing found the browser authorisation flow unreliable, and it has been removed entirely: no OAuth/PKCE, no callback handling, no Connect OpenRouter action. First use and Manage Connection now offer Enter Key (paste a key; it is verified before replacing the stored one) and Get Key (opens your provider's account page). Stored keys are never wiped by this change — only Disconnect, after confirmation, removes one.
+
+**Also in this feature preview, not yet released:** review changes in groups and apply only the ones you accept; optional editorial preferences for punctuation style and paragraph/list organisation; document-type detection and defaults; per-provider model defaults; and non-destructive key replacement and disconnect.
+
 ## v0.1.9 -- 2026-10-30
 
 **The default model is now GPT-6 Luna:** `openai/gpt-6-luna` on OpenRouter and `openai-gpt-6-luna` on Venice. If you set `deslop.model`, your value still applies. When it is unset, DeSlop uses the model ID of the provider you selected, for both rewrites and API-key validation. Before this, an unset model fell back to one global default, so a Venice key could be tested against an OpenRouter model ID.

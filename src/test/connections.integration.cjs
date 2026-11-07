@@ -2,7 +2,8 @@
 const assert = require('node:assert/strict');
 const Module = require('node:module');
 const originalLoad = Module._load;
-let handler, opened, gets, posts, stores, completions, info, inputs, warnings, picked, cancelled, active, getImpl, postImpl, createImpl, storeImpl, lastTitle, modelOverride;
+let opened, gets, completions, stores, info, inputs, warnings, picked, cancelled, active, getImpl, createImpl, storeImpl, lastTitle, modelOverride;
+let handlerRegistrations = 0, lastInfo, lastButtons, lastItems;
 const disposable = () => ({ dispose() {} });
 const secrets = {
   get: async slot => stores.get(slot),
@@ -20,14 +21,14 @@ const fakeVscode = {
   Uri: { parse: uri, from: x => uri(`${x.scheme}://${x.authority}${x.path}`) },
   workspace: { getConfiguration: () => ({ get: (key, fallback) => key === 'provider' ? active : key === 'model' ? modelOverride ?? fallback : fallback,
     inspect: () => modelOverride === undefined ? undefined : { globalValue: modelOverride } }) },
-  env: { uriScheme: 'vscode', asExternalUri: async x => x, openExternal: async x => { opened = x; return true; } },
+  env: { uriScheme: 'vscode', openExternal: async x => { opened = x; return true; } },
   window: {
-    registerUriHandler: x => { handler = x; return disposable(); },
-    showInformationMessage: async () => info.shift(),
-    showErrorMessage: async () => info.shift(),
+    registerUriHandler: () => { handlerRegistrations++; return disposable(); },
+    showInformationMessage: async (message, ...buttons) => { lastInfo = message; lastButtons = buttons; return info.shift(); },
+    showErrorMessage: async (message, ...buttons) => { lastInfo = message; lastButtons = buttons; return info.shift(); },
     showWarningMessage: async () => warnings.shift(),
     showInputBox: async () => inputs.shift(),
-    showQuickPick: async (_, options) => { lastTitle = options?.title; return picked.shift(); },
+    showQuickPick: async (items, options) => { lastTitle = options?.title; lastItems = items; return picked.shift(); },
     withProgress: async (_opts, fn) => fn({}, { isCancellationRequested: false, onCancellationRequested: fn => { cancelled = fn; return disposable(); } }),
   },
 };
@@ -42,7 +43,6 @@ class FakeOpenAI {
     } } };
   }
   async get(path, options) { gets.push({ path, options, client: this.options }); return getImpl ? getImpl(path, options) : { data: {} }; }
-  async post(path, options) { posts.push({ path, options, client: this.options }); return postImpl ? postImpl(path, options) : { key: 'synthetic-exchanged-key' }; }
 }
 Module._load = function(id, ...args) {
   if (id === 'vscode') return fakeVscode;
@@ -50,30 +50,29 @@ Module._load = function(id, ...args) {
   return originalLoad.call(this, id, ...args);
 };
 const onboarding = require('../../out/commands/onboarding');
-const auth = require('../../out/commands/connectionAuth');
 const api = require('../../out/api/providers');
 const tick = () => new Promise(r => setImmediate(r));
 function reset() {
-  opened = undefined; gets = []; posts = []; completions = []; stores = new Map([['deslop.openrouterApiKey', 'old-router'], ['deslop.veniceApiKey', 'old-venice']]);
+  opened = undefined; gets = []; completions = []; stores = new Map([['deslop.openrouterApiKey', 'old-router'], ['deslop.veniceApiKey', 'old-venice']]);
   inputs = []; info = []; warnings = []; picked = []; active = 'openrouter';
-  getImpl = postImpl = createImpl = storeImpl = lastTitle = modelOverride = undefined;
+  getImpl = createImpl = storeImpl = lastTitle = modelOverride = lastInfo = lastButtons = lastItems = undefined;
 }
 let count = 0;
 async function check(name, fn) { reset(); await fn(); count++; console.log(`PASS ${name}`); }
-async function startAuth(signal) {
-  info.push('Continue');
-  const result = auth.connectOpenRouter(signal);
-  await tick();
-  assert.ok(opened, 'browser opened');
-  const url = new URL(opened.toString());
-  assert.equal(url.origin, 'https://openrouter.ai');
-  assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
-  return { result, callback: url.searchParams.get('callback_url') };
-}
 async function main() {
   await check('replacement cancel preserves working credential', async () => {
     await onboarding.resetApiKey(secrets, 'openrouter');
     assert.equal(stores.get('deslop.openrouterApiKey'), 'old-router'); assert.equal(gets.length, 0);
+  });
+  await check('first use offers manual key entry only, for both providers', async () => {
+    for (const [provider, slot, name] of [['openrouter', 'deslop.openrouterApiKey', 'OpenRouter'], ['venice', 'deslop.veniceApiKey', 'Venice']]) {
+      stores.delete(slot);
+      info.push(undefined);
+      assert.equal(await onboarding.ensureApiKey(secrets, provider), undefined);
+      assert.match(lastInfo, new RegExp(`needs a ${name} API key`));
+      assert.deepEqual(lastButtons, ['Enter Key', 'Get Key']);
+      assert.equal(gets.length + completions.length, 0, 'first-use prompt sends no provider request');
+    }
   });
   await check('invalid replacement preserves both credentials', async () => {
     inputs.push('synthetic-candidate'); getImpl = async () => { throw { status: 401, message: 'SECRET' }; };
@@ -128,6 +127,17 @@ async function main() {
       release(true); await tick(); assert.deepEqual(info, ['Enter Key']); assert.equal(gets.length, 0);
     } finally { fakeVscode.env.openExternal = old; }
   });
+  await check('Manage Connection offers no browser connect action for either provider', async () => {
+    for (const provider of ['openrouter', 'venice']) {
+      if (provider === 'venice') { stores.delete('deslop.veniceApiKey'); }
+      picked.push(undefined);
+      await onboarding.manageConnection(secrets, provider);
+      assert.ok(Array.isArray(lastItems), 'quick pick items captured');
+      assert.ok(!lastItems.includes('Connect OpenRouter'), 'no browser connect action');
+      assert.ok(lastItems.includes(provider === 'openrouter' ? 'Replace Key' : 'Enter Key'));
+      assert.ok(lastItems.includes('Open Provider Account'));
+    }
+  });
   await check('model test requires charge consent', async () => {
     picked.push('Test Model Readiness (may incur charges)'); await onboarding.manageConnection(secrets, 'openrouter'); assert.equal(completions.length, 0);
     picked.push('Test Model Readiness (may incur charges)'); warnings.push('Run Test'); await onboarding.manageConnection(secrets, 'openrouter'); assert.equal(completions.length, 1);
@@ -175,7 +185,7 @@ async function main() {
     assert.equal(await replacing, undefined);
     assert.equal(stores.has('deslop.openrouterApiKey'), false);
   });
-  let registration = onboarding.registerConnectionHandlers({ extension: { id: 'auaggy.deslop' }, secrets });
+  let registration = onboarding.registerConnectionStatusListeners({ extension: { id: 'auaggy.deslop' }, secrets });
   try {
     await check('late test of a replaced credential cannot report current authentication success', async () => {
       let release;
@@ -197,131 +207,8 @@ async function main() {
       await onboarding.manageConnection(secrets, 'openrouter');
       assert.match(lastTitle, /not tested/);
     });
-    await check('PKCE success verifies authentication and stores only OpenRouter', async () => {
-      const flow = await startAuth(); active = 'venice';
-      await handler.handleUri(uri(flow.callback + '?code=synthetic-code'));
-      assert.equal(await flow.result, 'synthetic-exchanged-key'); assert.equal(stores.get('deslop.openrouterApiKey'), 'synthetic-exchanged-key'); assert.equal(stores.get('deslop.veniceApiKey'), 'old-venice');
-      assert.equal(posts[0].path, '/auth/keys'); assert.equal(posts[0].options.headers.Authorization, null); assert.equal(posts[0].options.body.code_challenge_method, 'S256'); assert.equal(gets[0].path, '/key');
-      await handler.handleUri(uri(flow.callback + '?code=synthetic-code')); assert.equal(posts.length, 1);
-    });
-    await check('abort before deferred progress callback does not route or open the browser', async () => {
-      const oldProgress = fakeVscode.window.withProgress;
-      const oldRoute = fakeVscode.env.asExternalUri;
-      let startTask, routed = false;
-      fakeVscode.window.withProgress = (options, run) => options.title.startsWith('Waiting for OpenRouter')
-        ? new Promise((resolve, reject) => { startTask = () => Promise.resolve(run({}, { isCancellationRequested: false, onCancellationRequested: fn => { cancelled = fn; return disposable(); } })).then(resolve, reject); })
-        : oldProgress(options, run);
-      fakeVscode.env.asExternalUri = value => { routed = true; return Promise.resolve(value); };
-      try {
-        const controller = new AbortController(); info.push('Continue');
-        const flow = auth.connectOpenRouter(controller.signal); await tick();
-        assert.ok(startTask, 'progress task deferred');
-        controller.abort();
-        startTask(); await tick();
-        assert.equal(routed, false, 'aborted task must not begin routing');
-        assert.equal(opened, undefined, 'aborted task must not open the browser');
-        assert.equal(await flow, undefined);
-      } finally { fakeVscode.window.withProgress = oldProgress; fakeVscode.env.asExternalUri = oldRoute; }
-      const next = await startAuth(); cancelled(); assert.equal(await next.result, undefined);
-    });
-    await check('dispose before deferred progress callback cannot route or open the browser', async () => {
-      const oldProgress = fakeVscode.window.withProgress;
-      const oldRoute = fakeVscode.env.asExternalUri;
-      let startTask, routed = false;
-      fakeVscode.window.withProgress = (options, run) => options.title.startsWith('Waiting for OpenRouter')
-        ? new Promise((resolve, reject) => { startTask = () => Promise.resolve(run({}, { isCancellationRequested: false, onCancellationRequested: fn => { cancelled = fn; return disposable(); } })).then(resolve, reject); })
-        : oldProgress(options, run);
-      fakeVscode.env.asExternalUri = value => { routed = true; return Promise.resolve(value); };
-      try {
-        info.push('Continue'); const flow = auth.connectOpenRouter(); await tick();
-        assert.ok(startTask);
-        registration.dispose();
-        startTask(); await tick();
-        assert.equal(routed, false, 'disposed task must not begin routing');
-        assert.equal(opened, undefined, 'disposed task must not open the browser');
-        assert.equal(await flow, undefined);
-      } finally {
-        fakeVscode.window.withProgress = oldProgress; fakeVscode.env.asExternalUri = oldRoute;
-        registration = onboarding.registerConnectionHandlers({ extension: { id: 'auaggy.deslop' }, secrets });
-      }
-      cancelled();
-    });
-    await check('abort during browser consent releases ownership and ignores late Continue', async () => {
-      const old = fakeVscode.window.showInformationMessage; let release;
-      fakeVscode.window.showInformationMessage = () => new Promise(resolve => { release = resolve; });
-      const controller = new AbortController();
-      try {
-        const pendingConsent = auth.connectOpenRouter(controller.signal); await tick();
-        controller.abort(); assert.equal(await pendingConsent, undefined);
-        release('Continue'); await tick(); assert.equal(opened, undefined);
-      } finally { fakeVscode.window.showInformationMessage = old; }
-      const next = await startAuth(); cancelled(); assert.equal(await next.result, undefined);
-    });
-    await check('only one browser connection owns consent and callback at a time', async () => {
-      const flow = await startAuth(); assert.equal(await auth.connectOpenRouter(), undefined);
-      cancelled(); assert.equal(await flow.result, undefined);
-    });
-    await check('PKCE verification failure cannot replace stored key', async () => {
-      getImpl = async () => { throw { status: 401 }; };
-      const flow = await startAuth(); await handler.handleUri(uri(flow.callback + '?code=synthetic-code'));
-      assert.equal(await flow.result, undefined); assert.equal(stores.get('deslop.openrouterApiKey'), 'old-router');
-    });
-    await check('PKCE wrong route ignored then cancellation preserves key', async () => {
-      const flow = await startAuth(); await handler.handleUri(uri('vscode://auaggy.deslop/connect/openrouter/wrong?code=synthetic-code'));
-      assert.equal(posts.length, 0); cancelled(); assert.equal(await flow.result, undefined); assert.equal(stores.get('deslop.openrouterApiKey'), 'old-router');
-    });
-    for (const query of ['error=access_denied', 'code=one&code=two', 'code=one&state=undocumented']) {
-      await check(`PKCE rejects callback ${query}`, async () => {
-        const flow = await startAuth(); await handler.handleUri(uri(flow.callback + '?' + query)); assert.equal(await flow.result, undefined); assert.equal(posts.length, 0); assert.equal(stores.get('deslop.openrouterApiKey'), 'old-router');
-      });
-    }
-    await check('PKCE concurrent replay cannot exchange twice or cancel valid exchange', async () => {
-      let release; postImpl = () => new Promise(r => { release = r; }); const flow = await startAuth();
-      const completion = handler.handleUri(uri(flow.callback + '?code=synthetic-code')); await tick();
-      await handler.handleUri(uri(flow.callback + '?code=synthetic-code')); assert.equal(posts.length, 1);
-      release({ key: 'synthetic-exchanged-key' }); await completion; assert.equal(await flow.result, 'synthetic-exchanged-key');
-    });
-    for (const failure of ['timeout', 'malformed', 'storage']) {
-      await check(`PKCE ${failure} preserves old key`, async () => {
-        if (failure === 'timeout') postImpl = async () => { throw { name: 'APIConnectionTimeoutError' }; };
-        if (failure === 'malformed') postImpl = async () => ({ key: 42 });
-        if (failure === 'storage') storeImpl = async () => { throw new Error('synthetic'); };
-        const flow = await startAuth(); await handler.handleUri(uri(flow.callback + '?code=synthetic-code')); assert.equal(await flow.result, undefined); assert.equal(stores.get('deslop.openrouterApiKey'), 'old-router');
-      });
-    }
-    await check('cancelled PKCE submitted store cannot overwrite a newer manual replacement', async () => {
-      let release;
-      storeImpl = () => new Promise(resolve => { release = resolve; });
-      const flow = await startAuth();
-      const completion = handler.handleUri(uri(flow.callback + '?code=synthetic-code')); await tick();
-      assert.ok(release, 'old store was submitted');
-      cancelled(); assert.equal(await flow.result, undefined);
-      storeImpl = undefined; inputs.push('newer-manual-key');
-      const replacement = onboarding.promptAndSaveKey(secrets, 'openrouter'); await tick();
-      assert.equal(stores.get('deslop.openrouterApiKey'), 'old-router');
-      release(); await completion;
-      assert.equal(await replacement, 'newer-manual-key');
-      assert.equal(stores.get('deslop.openrouterApiKey'), 'newer-manual-key');
-    });
-    for (const boundary of ['asExternalUri', 'openExternal']) {
-      await check('PKCE cancellation releases pending ' + boundary + ' and ignores late routing', async () => {
-        const original = fakeVscode.env[boundary]; let release;
-        fakeVscode.env[boundary] = value => new Promise(resolve => { release = () => resolve(boundary === 'asExternalUri' ? value : true); });
-        try {
-          info.push('Continue'); const flow = auth.connectOpenRouter(); await tick();
-          cancelled(); assert.equal(await flow, undefined);
-          release(); await tick();
-          if (boundary === 'asExternalUri') assert.equal(opened, undefined, 'cancelled route cannot launch browser');
-        } finally { fakeVscode.env[boundary] = original; }
-        const next = await startAuth(); cancelled(); assert.equal(await next.result, undefined);
-      });
-    }
-    await check('PKCE cancellation during exchange prevents late credential storage', async () => {
-      let release; postImpl = () => new Promise(r => { release = r; }); const flow = await startAuth();
-      const completion = handler.handleUri(uri(flow.callback + '?code=synthetic-code')); await tick(); cancelled();
-      release({ key: 'synthetic-exchanged-key' }); await completion; assert.equal(await flow.result, undefined); assert.equal(stores.get('deslop.openrouterApiKey'), 'old-router');
-    });
   } finally { registration.dispose(); }
+  assert.equal(handlerRegistrations, 0, 'no connection flow may register a URI handler');
   console.log(`${count} deterministic boundary tests passed; live provider/editor checks NOT performed.`);
   const Mocha = require('mocha');
   const path = require('node:path');

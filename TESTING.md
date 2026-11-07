@@ -6,7 +6,7 @@
 
 Use an isolated feature checkout and an Extension Development Host. Do not install a VSIX, update the Marketplace extension, run a publishing command or switch the main checkout. The development host should use a separate profile and extensions directory so its DeSlop instance cannot be confused with your installed copy.
 
-**Credential boundary:** a disposable editor profile does not guarantee a separate SecretStorage/keychain namespace. Before invoking any connection, PKCE, model-test or rewrite command, use either an independent OS account/VM credential service or a development test harness that explicitly mocks credentials and inference. Otherwise a stored key can be reused and billed before any setup prompt appears. Do not inspect an existing key to establish isolation. Separate approval is still required for billable requests.
+**Credential boundary:** a disposable editor profile does not guarantee a separate SecretStorage/keychain namespace. Before invoking any connection, model-test or rewrite command, use either an independent OS account/VM credential service or a development test harness that explicitly mocks credentials and inference. Otherwise a stored key can be reused and billed before any setup prompt appears. Do not inspect an existing key to establish isolation. Separate approval is still required for billable requests.
 
 1. Open the isolated feature checkout in VS Code. Check `git branch --show-current` and `git status`; do not use `main`. Follow the repository's dependency policy. A shared `node_modules` symlink is read-only: do not install into it.
 2. Run `npm run test:deterministic` (compiles, lints and runs the headless workflow, connection, review, editorial, request-contract and SDK-privacy checks). No provider calls occur in these tests. See [evaluation/README.md](evaluation/README.md) for editorial coverage. For the complete editor suite, coordinate a single GUI run and record the editor version, actual test count, exit code and any post-test cleanup error separately.
@@ -22,13 +22,13 @@ Use an isolated feature checkout and an Extension Development Host. Do not insta
    ```
 
    Verify the new window says **Extension Development Host** and the running extension points to this checkout. Do not use `--install-extension`. Keep the temporary directories private; close the host and remove them after testing. Deleting a profile may not remove a SecretStorage credential from the platform's credential service: explicitly Disconnect test credentials first. Never assume a new editor profile proves a separate keychain namespace.
-5. Open a scratch folder with synthetic README, source comment, article and commit-message examples. Do not open a real project containing secrets. Do not invoke credential-capable commands until the independent OS/VM credential service or explicit credential/inference mocks are established. Do not inspect, test, replace or disconnect any pre-existing credential. For an approved live test, create a disposable provider credential only in that isolated environment, approve potential charges separately, and revoke it afterwards. Browser authorisation must also use the intended test account.
+5. Open a scratch folder with synthetic README, source comment, article and commit-message examples. Do not open a real project containing secrets. Do not invoke credential-capable commands until the independent OS/VM credential service or explicit credential/inference mocks are established. Do not inspect, test, replace or disconnect any pre-existing credential. For an approved live test, create a disposable provider credential only in that isolated environment, approve potential charges separately, and revoke it afterwards.
 
-An isolated profile does not itself prove PKCE callback routing or SecretStorage isolation. Credential-write ordering is extension-host-local; do not assume simultaneous connection changes in different windows form a global transaction. Multiple windows, remote hosts and editor-specific credential services need explicit checks. Record the actual destination without recording callback query values.
+An isolated profile does not itself prove SecretStorage isolation. Credential-write ordering is extension-host-local; do not assume simultaneous connection changes in different windows form a global transaction. Multiple windows, remote hosts and editor-specific credential services need explicit checks. Record the actual credential destination without recording key values.
 
 ## Recorded automated integration evidence
 
-On 2026-11-07, the integrated feature tree (including the granularity fix `a0d4cfc` and the applied-settlement fix `10200dd`) passed compile, lint, bundle and its deterministic checks. A disposable-profile extension-host run on **VS Code 1.144.0, macOS arm64** passed **225 tests**, exit 0. Of these, seven use actual editor APIs: read-only virtual diff/native typing/external-edit restoration and close; tab return/cancel; group closure; duplicate-view closure; exact composed source replacement and one Undo; version-change refusal; and bundled command registration. The remaining tests are unit or boundary-fake tests, even though they ran inside an editor host. Credential and inference boundaries were explicitly mocked before workflow invocation; application cases also supply deterministic review choices. Native workflow tests call compiled modules directly; bundled activation checks registration only; the picker reveal button and grouped-README navigation remain fake-tested plus pending manual. A keyboard/palette review-to-application walkthrough remains pending. No extension credential lookup, provider request, browser authorisation or paid evaluation was performed.
+On 2026-11-07, the integrated feature tree (including the granularity fix `a0d4cfc` and the applied-settlement fix `10200dd`) passed compile, lint, bundle and its deterministic checks. A disposable-profile extension-host run on **VS Code 1.144.0, macOS arm64** passed **225 tests**, exit 0. Of these, seven use actual editor APIs: read-only virtual diff/native typing/external-edit restoration and close; tab return/cancel; group closure; duplicate-view closure; exact composed source replacement and one Undo; version-change refusal; and bundled command registration. The remaining tests are unit or boundary-fake tests, even though they ran inside an editor host. Credential and inference boundaries were explicitly mocked before workflow invocation; application cases also supply deterministic review choices. Native workflow tests call compiled modules directly; bundled activation checks registration only; the picker reveal button and grouped-README navigation remain fake-tested plus pending manual. A keyboard/palette review-to-application walkthrough remains pending. No extension credential lookup, provider request, browser authorisation or paid evaluation was performed. **This run predates browser/OAuth connection removal:** that feature was removed from this branch afterwards at the user's request, so current test counts are lower and manual API-key entry is the only connection method.
 
 Headless checks separately passed: 23 workflow cases (including the applied-settlement regression); 39 connection-boundary cases plus 46 connection/model unit cases; 48 review cases; 14 editorial/asset cases; 32 request/evaluation comparisons plus consent/contribution checks; the actual SDK against five mocked fetches with debug logging enabled and zero emitted logs; and an external 24-fixture granularity harness (23 useful-granularity passes, 1 documented clause-level limitation, 0 safety failures, 200 seeded composition properties). Counts overlap the editor suite and must not be added together as independent coverage.
 
@@ -40,9 +40,9 @@ Record `pass`, `fail`, or `pending`, exact build/commit and editor version for e
 
 | Check | Expected observation | Status |
 |---|---|---|
-| First use | Select prose, press **Shift+Alt+D**; complete approved connection setup without reselecting | Pending |
-| Manual setup | OpenRouter and Venice each retain their own test credential; cancel leaves source unchanged | Pending |
-| OpenRouter browser setup | Account/credits notice, callback in intended host, successful resume; denial/cancel/expiry recover safely | Pending |
+| First use | Select prose, press **Shift+Alt+D**; complete key setup without reselecting | Pending |
+| Manual setup | First use and Manage Connection offer Enter Key/Get Key only for both providers; Get Key opens the provider account page, never an authorisation flow | Pending |
+| Manual key entry | OpenRouter and Venice each retain their own test credential; cancel leaves source unchanged | Pending |
 | Type resolution | Explicit default wins; README/comment/commit contexts infer; arbitrary Markdown asks | Pending |
 | Remembered type | Last choice reorders only by default; explicit user setting enables reuse; invalid stored value asks | Pending |
 | Unchanged passage | “No changes needed”; no edit or review | Pending |
@@ -77,17 +77,17 @@ Do not induce failure by modifying a live extension or real credentials. Use moc
 
 ## Compatibility matrix
 
-The manifest minimum is VS Code 1.110.0. These are test targets, not claims of completed support. Name an alternative editor before claiming compatibility; registry availability is not evidence that callbacks or partial review work there.
+The manifest minimum is VS Code 1.110.0. These are test targets, not claims of completed support. Name an alternative editor before claiming compatibility; registry availability is not evidence that manual-key connection or partial review work there.
 
-| Editor/environment | Exact version | PKCE | Manual fallback | Review/partial selection | Preferences | Limits |
-|---|---|---|---|---|---|---|
-| VS Code minimum, local | 1.110.0 | Pending | Pending | Pending | Pending | Full finished-build walkthrough required |
-| VS Code current, local | 1.144.0, macOS arm64 | Pending | Pending | Automated LF-only native checks passed incl. grouped README cases; manual controls/subsets/reveal pending | Deterministic checks passed; live pending | No live callback/credential-host claim; clause-level and semantic limits remain |
-| VS Code Remote SSH | To record local + remote host versions | Pending | Pending | Pending | Pending | Record browser location, external URI route and credential owner without secrets |
-| VS Code Dev Container | To record host + container versions | Pending | Pending | Pending | Pending | Same routing/ownership checks as SSH |
-| Alternative compatible editor | Not selected | Untested | Untested | Untested | Untested | No compatibility claim |
+| Editor/environment | Exact version | Manual key connection | Review/partial selection | Preferences | Limits |
+|---|---|---|---|---|---|
+| VS Code minimum, local | 1.110.0 | Pending | Pending | Pending | Full finished-build walkthrough required |
+| VS Code current, local | 1.144.0, macOS arm64 | Pending | Automated LF-only native checks passed incl. grouped README cases; manual controls/subsets/reveal pending | Deterministic checks passed; live pending | No live credential-host claim; clause-level and semantic limits remain |
+| VS Code Remote SSH | To record local + remote host versions | Pending | Pending | Pending | Record credential owner without secrets |
+| VS Code Dev Container | To record host + container versions | Pending | Pending | Pending | Same credential-ownership checks as SSH |
+| Alternative compatible editor | Not selected | Untested | Untested | Untested | No compatibility claim |
 
-Also test lost browser session, callback to the wrong window, browser-open failure, editor reload and multiple open windows. Use manual entry when supported recovery is offered; never weaken callback validation to make a test pass.
+Also test editor reload during key entry, Get Key browser-open failure, a mistyped candidate and multiple open windows. Manual key entry is the only connection method; never reintroduce an authorisation flow to make a test pass.
 
 ## Screenshots
 
@@ -99,13 +99,13 @@ Recruit 5–8 adults who already write in supported editors, including developer
 
 Before observing, read and obtain agreement to this consent statement:
 
-> We are testing the editing workflow, not your writing ability. With your permission, we will take notes about actions, delays, confusing controls and your feedback. Do not share keys, authorisation callbacks or private text. You may use synthetic passages, skip any task or stop at any time. We will not record your screen/audio or retain your selected prose unless we ask separately and you explicitly agree. Notes use a participant code, not your name. You can ask us to delete your notes before the agreed retention deadline. No silent telemetry is added.
+> We are testing the editing workflow, not your writing ability. With your permission, we will take notes about actions, delays, confusing controls and your feedback. Do not share keys or private text. You may use synthetic passages, skip any task or stop at any time. We will not record your screen/audio or retain your selected prose unless we ask separately and you explicitly agree. Notes use a participant code, not your name. You can ask us to delete your notes before the agreed retention deadline. No silent telemetry is added.
 
 Agree a retention/deletion date before starting and store notes outside the repository with access limited to the study team. Record consent date and participant code, not identity or secret-bearing screenshots. Separate permission is required for any quotation in a public report.
 
 Without coaching, ask each participant to:
 
-1. Connect using approved PKCE in the primary environment, or manual fallback where suitable.
+1. Enter an API key for the assigned provider (manual key entry is the only connection method) and record avoidable prompts or confusing steps.
 2. Select a passage and request a rewrite; record avoidable prompts and setup completion.
 3. Find explanations, include/exclude groups, inspect the composed preview and apply a subset.
 4. Undo once, then discard a different result.
@@ -113,7 +113,7 @@ Without coaching, ask each participant to:
 6. Cancel replacement of a test credential, then replace it successfully.
 7. Recover from a safely simulated request or stale-source failure.
 
-Record task completion, time or delays when useful, missed controls, partial-selection misunderstandings, manual restorations, recovery outcome and voluntary intent to reuse. Ask why they would choose this over their current assistant. Use observations, not a success percentage from a small convenience sample. Do not collect participant prose, API keys or callback values in diagnostic notes.
+Record task completion, time or delays when useful, missed controls, partial-selection misunderstandings, manual restorations, recovery outcome and voluntary intent to reuse. Ask why they would choose this over their current assistant. Use observations, not a success percentage from a small convenience sample. Do not collect participant prose or API keys in diagnostic notes.
 
 **Study status: not recruited, not run; no volunteer observations available.**
 
@@ -123,7 +123,7 @@ This checklist is preparation only. Do not publish, merge, bump a version, tag, 
 
 - [ ] Compile/lint/deterministic checks and one coordinated editor suite have recorded outcomes; post-test cleanup errors identified separately.
 - [ ] Manual walkthrough completed, including failed application, close/cancel, keyboard review, partial selection, stale source, undo and rotation.
-- [ ] Primary-editor PKCE works end to end; remote/editor matrix updated with actual versions and limits.
+- [ ] Manual-key connection works end to end in the primary editor; remote/editor matrix updated with actual versions and limits.
 - [ ] Both providers/default selected models reviewed under the [editorial rubric](evaluation/README.md), including comparison, preferences and mixed partial subsets.
 - [ ] No unresolved source-loss, credential exposure, wrong-target, misleading partial-selection, material-meaning or protected-content defects.
 - [ ] Consent-based study completed or explicitly still blocking acceptance; findings redacted, assigned and retested.

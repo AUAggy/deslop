@@ -2,15 +2,13 @@ import * as vscode from 'vscode';
 import { getApiKey, setApiKey, deleteApiKey, beginCredentialIntent, credentialGeneration } from '../storage/secrets';
 import { activeProvider, captureRequestOptions, verifyAuthentication, testModelReadiness, type Provider } from '../api/providers';
 import { classifyProviderError } from '../api/errors';
-import { connectOpenRouter, registerConnectionHandlers as registerAuthHandlers } from './connectionAuth';
 import { replaceCredential } from '../storage/credentialReplacement';
-export function registerConnectionHandlers(context: vscode.ExtensionContext): vscode.Disposable {
-  const auth = registerAuthHandlers(context);
+export function registerConnectionStatusListeners(context: vscode.ExtensionContext): vscode.Disposable {
   const changes = context.secrets.onDidChange?.(() => { connectionEpoch++; lastTests.clear(); });
   const settings = vscode.workspace.onDidChangeConfiguration?.(event => {
     if (event.affectsConfiguration('deslop.model') || event.affectsConfiguration('deslop.provider')) { connectionEpoch++; lastTests.clear(); }
   });
-  return new vscode.Disposable(() => { auth.dispose(); changes?.dispose(); settings?.dispose(); lastTests.clear(); });
+  return new vscode.Disposable(() => { changes?.dispose(); settings?.dispose(); lastTests.clear(); });
 }
 
 const PROVIDER_INFO = {
@@ -43,15 +41,9 @@ export async function ensureApiKey(secrets: vscode.SecretStorage, provider: Prov
   if (signal?.aborted) { return undefined; }
   if (existing) { return existing; }
   const info = PROVIDER_INFO[provider];
-  const action = await setupPrompt(signal, () => vscode.window.showInformationMessage(`DeSlop needs a ${info.name} connection. Your pending selection stays in memory during setup.`, ...(provider === 'openrouter' ? ['Connect OpenRouter'] : []), 'Enter Key', 'Get Key'));
+  const action = await setupPrompt(signal, () => vscode.window.showInformationMessage(`DeSlop needs a ${info.name} API key. Your pending selection stays in memory during setup.`, 'Enter Key', 'Get Key'));
   if (signal?.aborted) { return undefined; }
-  if (action === 'Connect OpenRouter') {
-    const key = await connectOpenRouter(signal);
-    if (key) { lastTests.delete(provider); return key; }
-    if (signal?.aborted) { return undefined; }
-    const fallback = await setupPrompt(signal, () => vscode.window.showInformationMessage('Browser connection was not completed. Enter a key instead, or restart setup later. An expired, reloaded, or wrong-window callback cannot resume this session.', 'Enter Key'));
-    if (fallback !== 'Enter Key') { return undefined; }
-  } else if (action === 'Get Key') {
+  if (action === 'Get Key') {
     const opened = await setupPrompt(signal, () => openAccount(provider));
     if (signal?.aborted) { return undefined; }
     const next = await setupPrompt(signal, () => vscode.window.showInformationMessage(opened ? `Create a key in your ${info.name} account, then continue here.` : `Could not open the browser. Visit ${info.keyUrl} manually, then continue here.`, 'Enter Key'));
@@ -130,19 +122,13 @@ export async function manageConnection(secrets: vscode.SecretStorage, provider?:
   const request = captureRequestOptions(captured);
   const last = lastTests.get(captured);
   const status = last?.generation === generation && (!last.model || last.model === request.model) ? last.label : 'not tested for this credential/model';
-  const items = [...(captured === 'openrouter' ? ['Connect OpenRouter'] : []), key ? 'Replace Key' : 'Enter Key', 'Test Authentication', 'Test Model Readiness (may incur charges)', 'Open Provider Account', ...(key ? ['Disconnect'] : [])];
+  const items = [key ? 'Replace Key' : 'Enter Key', 'Test Authentication', 'Test Model Readiness (may incur charges)', 'Open Provider Account', ...(key ? ['Disconnect'] : [])];
   const action = await vscode.window.showQuickPick(items, { title: `${name}: ${key ? 'key stored' : 'no key'}; ${status}` });
   if (action === 'Enter Key' || action === 'Replace Key') { await promptAndSaveKey(secrets, captured); }
-  else if (action === 'Connect OpenRouter') {
-    if (await connectOpenRouter()) { lastTests.delete(captured); }
-    else if (await vscode.window.showInformationMessage('Browser connection did not complete. Enter a key instead, or reopen Manage Connection to restart.', 'Enter Key') === 'Enter Key') {
-      await promptAndSaveKey(secrets, captured);
-    }
-  }
   else if (action === 'Disconnect') { await disconnectProvider(secrets, captured); }
   else if (action === 'Open Provider Account') { if (!await openAccount(captured)) { void vscode.window.showErrorMessage(`Could not open ${PROVIDER_INFO[captured].keyUrl}.`); } }
   else if (action?.startsWith('Test')) {
-    if (!key) { void vscode.window.showInformationMessage('Connect or enter a key first.'); return; }
+    if (!key) { void vscode.window.showInformationMessage('Enter a key first.'); return; }
     const options = request;
     const modelTest = action.startsWith('Test Model');
     if (modelTest && await vscode.window.showWarningMessage(`Send a small completion to ${name}, model ${options.model}? This may incur provider usage charges. Authentication alone does not require a completion.`, { modal: true }, 'Run Test') !== 'Run Test') { return; }

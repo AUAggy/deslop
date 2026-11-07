@@ -86,7 +86,15 @@ async function main() {
     assert.equal(config.default, false); assert.equal(config.scope, 'application');
   }
   for (const menu of manifest.contributes.menus['editor/title']) assert.equal(menu.when, 'deslop.reviewActive');
-  assert.ok(manifest.activationEvents.includes('onUri'));
+  assert.ok(!manifest.activationEvents.includes('onUri'), 'no URI activation event');
+  assert.ok(manifest.activationEvents.every(event => event.startsWith('onCommand:deslop.')), 'only deslop command activation events');
+  for (const file of ['src/extension.ts', 'src/commands/onboarding.ts', 'src/api/errors.ts']) {
+    const text = fs.readFileSync(path.join(root, file), 'utf8');
+    assert.doesNotMatch(text, /registerUriHandler|asExternalUri|connectOpenRouter|PkceSession|openRouterAuthFailureMessage/);
+  }
+  for (const gone of ['src/api/pkce.ts', 'src/api/authMessages.ts', 'src/commands/connectionAuth.ts']) {
+    assert.ok(!fs.existsSync(path.join(root, gone)), `removed auth module must not exist: ${gone}`);
+  }
   assert.equal(require('@types/vscode/package.json').version, '1.110.0');
   console.log('PASS explicit-global-only consent, default-off preferences, exact command/contribution coverage, scoped menus and minimum API types.');
 }

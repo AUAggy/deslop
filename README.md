@@ -12,12 +12,12 @@
 
 Edit AI-assisted prose inside your editor, review the changes, and keep control of the result. DeSlop rewrites selected READMEs, comments, commit messages and article passages using your chosen provider and model.
 
-**Feature-preview branch:** the connection, partial-review and preference workflow below is integrated for isolated development-host testing. Partial-selection limitations and manual acceptance gates remain unresolved. This is not a claim about the current Marketplace release. Live editorial evaluations, PKCE/editor compatibility, volunteer observations and updated screenshots remain pending. See [Testing the development workflow](TESTING.md) to try this checkout without replacing your installed extension or changing main.
+**Feature-preview branch:** the connection, partial-review and preference workflow below is integrated for isolated development-host testing. Partial-selection limitations and manual acceptance gates remain unresolved. This is not a claim about the current Marketplace release. Live editorial evaluations, editor compatibility, volunteer observations and updated screenshots remain pending. See [Testing the development workflow](TESTING.md) to try this checkout without replacing your installed extension or changing main.
 
 ## Getting started
 
 1. Open a document and **select the prose first**. Press **Shift+Alt+D**, choose **DeSlop: DeSlop Selection** from the Command Palette, or use the selection's context menu.
-2. If no credential is stored, connect to the chosen provider. OpenRouter browser authorisation requires your own OpenRouter account and credits; it does not provide free inference. Manual API-key entry remains available for OpenRouter and Venice. Your pending selection stays in memory while setup completes.
+2. If no credential is stored, enter an API key for the chosen provider (manual API-key entry is the only connection method; browser/OAuth authorisation was removed). Get Key opens your provider's account page in the browser — it never starts an authorisation flow. Setup requires your own provider account and credits; it does not provide free inference. Your pending selection stays in memory while setup completes.
 3. Confirm the document type if asked. An explicit default wins; recognised README filenames, source comments and commit-message editors can avoid the picker. An arbitrary Markdown filename is not treated as a README. Your last choice only changes picker order unless you explicitly enable automatic reuse.
 4. Review the read-only native diff. **Show Current Changes** opens model-generated explanations; they are aids, not an exhaustive edit list or a safety guarantee.
 5. Use **Select Change Groups** to include or exclude actual text changes. Inspect the resulting preview, then **Apply Selected Changes**. Use **Accept Full Rewrite** to take the whole proposal, or **Discard Rewrite** to leave source unchanged. Selecting no groups makes no source edit. Group selection does not make another model request.
@@ -31,10 +31,11 @@ Review is enabled by default. Keep it enabled when testing partial acceptance. R
 
 ## Connections, cancellation and recovery
 
-Open **DeSlop: Manage Connection** from the Command Palette to connect, replace a credential, test the connection, open the provider account or disconnect. A stored key and a successful connection test are different states; neither guarantees credit or access to a particular model. Any completion-based model test must disclose potential charges before it runs.
+Open **DeSlop: Manage Connection** from the Command Palette to enter or replace a credential, test the connection, open the provider account or disconnect. A stored key and a successful connection test are different states; neither guarantees credit or access to a particular model. Any completion-based model test must disclose potential charges before it runs.
 
-- **OpenRouter:** browser authorisation exchanges directly with OpenRouter, with no DeSlop credential-handling backend. Manual entry is the fallback when callback routing is unavailable. Primary-editor and remote routing still require live verification in this feature preview.
-- **Venice:** enter a Venice API key manually. Keys are stored separately for each provider.
+- **OpenRouter:** enter an OpenRouter API key manually. Get Key opens openrouter.ai/keys so you can create one; it does not start or complete any authorisation flow on DeSlop's behalf.
+- **Venice:** enter a Venice API key manually. Get Key opens the Venice API-keys settings page.
+- Keys are stored separately for each provider; stored keys are never wiped by setup changes — only explicit Disconnect, after confirmation.
 - **Replace:** cancelling or rejecting a candidate must leave the working credential intact. The legacy Reset API Key entry point becomes safe replacement, not immediate deletion.
 - **Disconnect:** removes only the identified provider's credential after confirmation.
 
@@ -136,9 +137,9 @@ The four types remain **README**, **Docstring/Comment**, **Commit Message** and 
 
 ## Privacy and costs
 
-Selected prose, the system prompt, document type and enabled preference instructions are sent to your selected provider over HTTPS using your credential. Inference is funded through your provider account. Authentication/connection checks and browser authorisation can also contact the provider. Provider and upstream model-service policies apply; review them before sending confidential text. DeSlop does not promise a provider's retention policy on its behalf.
+Selected prose, the system prompt, document type and enabled preference instructions are sent to your selected provider over HTTPS using your credential. Inference is funded through your provider account. Authentication and connection checks also contact the provider. Provider and upstream model-service policies apply; review them before sending confidential text. DeSlop does not promise a provider's retention policy on its behalf.
 
-Credentials use VS Code SecretStorage, not repository settings. The credential service and ownership depend on the editor/extension-host environment. Do not share API keys, authorisation codes or callback URLs in bug reports.
+Credentials use VS Code SecretStorage, not repository settings. The credential service and ownership depend on the editor/extension-host environment. Do not share API keys in bug reports.
 
 The extension adds no telemetry and does not deliberately archive selected prose or pending results. Review and recovery keep prose in memory for the active session, not a DeSlop-managed draft history. The editor/platform's own storage, crash handling and clipboard policies are separate. Copying a result is an explicit action. The opt-in evaluation runner separately writes only its synthetic test results to a user-chosen file.
 

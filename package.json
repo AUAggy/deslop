@@ -43,8 +43,7 @@
   "activationEvents": [
     "onCommand:deslop.humanizeSelection",
     "onCommand:deslop.resetApiKey",
-    "onCommand:deslop.showChanges",
-    "onUri"
+    "onCommand:deslop.showChanges"
   ],
   "main": "./dist/extension",
   "contributes": {

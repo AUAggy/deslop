@@ -15,9 +15,8 @@ const MESSAGES: Record<ErrorCategory, string> = {
 export type RecoveryAction = 'Replace Key' | 'Open Provider Account' | 'Change Model' | 'Retry';
 export class ProviderError extends Error {
   readonly actions: readonly RecoveryAction[];
-  /** Optional safe static detail replacing the generic category message; never carries raw payloads or values. */
-  constructor(public readonly category: ErrorCategory, public readonly status?: number, detail?: string) {
-    super(detail ?? MESSAGES[category]);
+  constructor(public readonly category: ErrorCategory, public readonly status?: number) {
+    super(MESSAGES[category]);
     this.name = 'ProviderError';
     this.actions = category === 'authentication' ? ['Replace Key', 'Open Provider Account']
       : category === 'credit' || category === 'permission' ? ['Open Provider Account']

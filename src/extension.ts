@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 import { humanizeSelection, disposeWorkflow, returnToOperation, cancelOperation, copyResult,
   changeDocumentType, changeModel, configurePreferences } from './commands/humanize';
-import { resetApiKey, manageConnection, disconnectProvider, registerConnectionHandlers } from './commands/onboarding';
+import { resetApiKey, manageConnection, disconnectProvider, registerConnectionStatusListeners } from './commands/onboarding';
 import { initChannel, showChangelog } from './ui/changelog';
 import { registerReviewCommands, disposeReview } from './ui/diff';
 
 export function activate(context: vscode.ExtensionContext): void {
   initChannel(context);
   registerReviewCommands(context);
-  context.subscriptions.push(registerConnectionHandlers(context));
+  context.subscriptions.push(registerConnectionStatusListeners(context));
   const commands: Record<string, () => unknown> = {
     'deslop.humanizeSelection': () => humanizeSelection(context),
     'deslop.resetApiKey': () => resetApiKey(context.secrets),
