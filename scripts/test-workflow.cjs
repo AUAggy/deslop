@@ -18,7 +18,7 @@ const response = { rewritten: 'Clear prose.', changes: [{ pattern: 'padding', ac
 
 function reset() {
   api?.disposeWorkflow();
-  state = { requests: [], reviews: [], errors: [], warnings: [], infos: [], clipboard: [], logs: [],
+  state = { failLog: false, requests: [], reviews: [], errors: [], warnings: [], infos: [], clipboard: [], logs: [],
     edits: [], applied: true, typePicks: 0, provider: 'openrouter', model: 'captured-model',
     prefs: { preservePunctuationStyle: false, preserveParagraphListStructure: false },
     autoAccept: false, key: 'synthetic-key', review: deferred(), request: undefined, errorActions: [] };
@@ -83,7 +83,7 @@ async function load() {
       showReview: async request => { state.reviews.push(request); return state.review.promise; },
       cancelReview: () => state?.review.resolve({ kind: 'discard' }), returnToReview: async () => {},
     },
-    '../ui/changelog': { logChanges: (...args) => state.logs.push(args) },
+    '../ui/changelog': { logChanges: (...args) => { if (state.failLog) { throw new Error('Synthetic optional output failure'); } state.logs.push(args); } },
     '../util/isProseSelection': { isProseSelection: async () => true, isCodeCommentSelection: async () => false },
     '../editorial/settings': {
       readEditorialPreferences: () => state.prefs,
@@ -237,6 +237,22 @@ test('freshness is checked again after asynchronously revealing the captured sou
   assert.equal(state.edits.length, 0);
   assert.equal(state.logs.length, 0);
   await api.copyResult(); assert.deepEqual(state.clipboard, [response.rewritten]);
+});
+
+test('optional post-apply explanation failure cannot strand a successful edit', async () => {
+  for (const autoAccept of [false, true]) {
+    reset(); state.autoAccept = autoAccept; state.failLog = true;
+    const run = start(); await settle();
+    if (!autoAccept) { await accept(); }
+    await run;
+    assert.equal(state.edits.length, 1);
+    assert.ok(!state.infos.some(message => message.startsWith('DeSlop is applying.')), 'must leave applying');
+    assert.ok(state.warnings.some(message => message.includes('change log could not be updated')));
+    state.review = deferred();
+    const second = start(); await settle();
+    assert.equal(state.requests.length, 2, 'terminal applied state must release the singleton');
+    api.cancelOperation(); await second;
+  }
 });
 
 test('failed edit is not announced as success and retains the exact composed result', async () => {

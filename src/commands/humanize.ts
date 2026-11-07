@@ -280,8 +280,17 @@ async function applyResult(op: Operation, text: string, summary?: AppliedSelecti
   } catch { /* Recover without exposing source/provider payloads. */ }
   if (!op.owns(token)) { return; }
   if (!applied) { await recover(op, 'The edit could not be applied. Your result is still available.'); return; }
-  if (completed) { logChanges(completed.changes, s.documentType, { show: s.showChangeLog, summary }); }
+  // Terminal state first: once the editor confirmed the edit, optional explanation
+  // storage must not own correctness or keep the operation in 'applying'. finish()
+  // clears the completed result, so capture what the changelog needs beforehand.
+  const appliedResult = completed;
   finish(op, 'applied');
+  try {
+    if (appliedResult) { logChanges(appliedResult.changes, s.documentType, { show: s.showChangeLog, summary }); }
+  } catch {
+    void vscode.window.showWarningMessage('Rewrite applied, but the change log could not be updated. Undo restores the original selection.');
+    return;
+  }
   void vscode.window.showInformationMessage('Rewrite applied. Undo restores the original selection.');
 }
 
