@@ -6,8 +6,10 @@
 
 Use an isolated feature checkout and an Extension Development Host. Do not install a VSIX, update the Marketplace extension, run a publishing command or switch the main checkout. The development host should use a separate profile and extensions directory so its DeSlop instance cannot be confused with your installed copy.
 
+**Credential boundary:** a disposable editor profile does not guarantee a separate SecretStorage/keychain namespace. Before invoking any connection, PKCE, model-test or rewrite command, use either an independent OS account/VM credential service or a development test harness that explicitly mocks credentials and inference. Otherwise a stored key can be reused and billed before any setup prompt appears. Do not inspect an existing key to establish isolation. Separate approval is still required for billable requests.
+
 1. Open the isolated feature checkout in VS Code. Check `git branch --show-current` and `git status`; do not use `main`. Follow the repository's dependency policy. A shared `node_modules` symlink is read-only: do not install into it.
-2. Run `npm run compile`, `npm run lint`, and the deterministic editorial commands in [evaluation/README.md](evaluation/README.md). For the complete editor suite, coordinate a single GUI run and record the editor version, actual test count, exit code and any post-test cleanup error separately.
+2. Run `npm run test:deterministic` (compiles, lints and runs the headless workflow, connection, review, editorial, request-contract and SDK-privacy checks). No provider calls occur in these tests. See [evaluation/README.md](evaluation/README.md) for editorial coverage. For the complete editor suite, coordinate a single GUI run and record the editor version, actual test count, exit code and any post-test cleanup error separately.
 3. Run `npm run bundle` in this checkout. The extension entry point is `dist/extension.js`; compiling TypeScript alone is not the development-host runtime bundle.
 4. Use a temporary launch configuration in this checkout, or start VS Code from a terminal with separate directories. For example on a machine with the `code` CLI:
 
@@ -20,9 +22,17 @@ Use an isolated feature checkout and an Extension Development Host. Do not insta
    ```
 
    Verify the new window says **Extension Development Host** and the running extension points to this checkout. Do not use `--install-extension`. Keep the temporary directories private; close the host and remove them after testing. Deleting a profile may not remove a SecretStorage credential from the platform's credential service: explicitly Disconnect test credentials first. Never assume a new editor profile proves a separate keychain namespace.
-5. Open a scratch folder with synthetic README, source comment, article and commit-message examples. Do not open a real project containing secrets. Do not inspect, test, replace or disconnect any pre-existing credential. If a stored credential unexpectedly appears, stop and use a separate OS account or disposable VM with its own credential service. For a live test, deliberately create a disposable provider credential only in that isolated environment, approve potential charges, and revoke it afterwards. Browser authorisation must also use the intended test account.
+5. Open a scratch folder with synthetic README, source comment, article and commit-message examples. Do not open a real project containing secrets. Do not invoke credential-capable commands until the independent OS/VM credential service or explicit credential/inference mocks are established. Do not inspect, test, replace or disconnect any pre-existing credential. For an approved live test, create a disposable provider credential only in that isolated environment, approve potential charges separately, and revoke it afterwards. Browser authorisation must also use the intended test account.
 
 An isolated profile does not itself prove PKCE callback routing or SecretStorage isolation. Multiple windows, remote hosts and editor-specific credential services need explicit checks. Record the actual destination without recording callback query values.
+
+## Recorded automated integration evidence
+
+On 2026-11-07, the integrated feature tree passed compile, lint, bundle and its deterministic checks. A disposable-profile extension-host run on **VS Code 1.144.0, macOS arm64** passed **211 tests**, exit 0. Of these, seven use actual editor APIs: read-only virtual diff/native typing/external-edit restoration and close; tab return/cancel; group closure; duplicate-view closure; exact composed source replacement and one Undo; version-change refusal; and bundled command registration. The remaining tests are unit or boundary-fake tests, even though they ran inside an editor host. Credential and inference boundaries were explicitly mocked before workflow invocation; application cases also supply deterministic review choices. Native workflow tests call compiled modules directly; bundled activation checks registration only. A keyboard/palette review-to-application walkthrough remains pending. No extension credential lookup, provider request, browser authorisation or paid evaluation was performed.
+
+Headless checks separately passed: 22 workflow cases; 39 connection-boundary cases plus 46 connection/model unit cases; 34 review cases; 14 editorial/asset cases; 32 request/evaluation comparisons plus consent/contribution checks; and the actual SDK against five mocked fetches with debug logging enabled and zero emitted logs. Counts overlap the editor suite and must not be added together as independent coverage.
+
+The editor test CLI was invoked directly with disposable user-data, extensions and workspace paths. The normal `npm run test`/posttest cleanup chain was not run, so this is not a claim that its historical macOS cleanup error is resolved. Public APIs compile against installed `@types/vscode` 1.110.0; runtime execution at the minimum editor version is still pending. These automated results do not close the manual walkthrough or the partial-selection implementation blocker.
 
 ## Walkthrough: source, review and recovery
 
@@ -55,6 +65,12 @@ Record `pass`, `fail`, or `pending`, exact build/commit and editor version for e
 | Disconnect | Confirmation required, only intended test provider removed | Pending |
 | Reload | No prose restored from disk or falsely resumable request | Pending |
 
+### Known partial-selection blocker
+
+The current implementation does not provide useful fine-grained selection for most formatted READMEs. Any recognised protected content or markup delimiter anywhere in the passage collapses it to a single whole-rewrite group. Unchanged headings, inline code, lists, quotes, tables, emphasis, links and HTML can trigger this fallback. Plain-text changes on separate physical lines can be selectable when unchanged lines separate them; same-line edits cannot be split. A newline-count change among multiple groups, or more than 250,000 line-pair comparison cells, also causes whole-rewrite fallback. The title, status and picker disclose the group count/reason.
+
+For partial-selection testing, include both a plain multiline example that genuinely offers multiple groups and an ordinary formatted README that demonstrates the limitation. Record the latter as a remaining implementation blocker, not as a successful granular README review. Structural safety checks do not prove semantic independence. If native EOL normalisation prevents an exact preview, Apply is blocked rather than silently normalising excluded text; copy the completed result or discard.
+
 Do not induce failure by modifying a live extension or real credentials. Use mocked provider/error boundaries for deterministic failure checks; mark real UI validation pending when no safe harness is available.
 
 ## Compatibility matrix
@@ -64,7 +80,7 @@ The manifest minimum is VS Code 1.110.0. These are test targets, not claims of c
 | Editor/environment | Exact version | PKCE | Manual fallback | Review/partial selection | Preferences | Limits |
 |---|---|---|---|---|---|---|
 | VS Code minimum, local | 1.110.0 | Pending | Pending | Pending | Pending | Full finished-build walkthrough required |
-| VS Code current, local | To record | Pending | Pending | Pending | Pending | Callback window/host ownership unverified |
+| VS Code current, local | 1.144.0, macOS arm64 | Pending | Pending | Automated LF-only native checks passed; manual controls/subsets pending | Deterministic checks passed; live pending | No live callback/credential-host claim; coarse README grouping remains a blocker |
 | VS Code Remote SSH | To record local + remote host versions | Pending | Pending | Pending | Pending | Record browser location, external URI route and credential owner without secrets |
 | VS Code Dev Container | To record host + container versions | Pending | Pending | Pending | Pending | Same routing/ownership checks as SSH |
 | Alternative compatible editor | Not selected | Untested | Untested | Untested | Untested | No compatibility claim |

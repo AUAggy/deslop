@@ -12,7 +12,7 @@
 
 Edit AI-assisted prose inside your editor, review the changes, and keep control of the result. DeSlop rewrites selected READMEs, comments, commit messages and article passages using your chosen provider and model.
 
-**Feature-preview branch:** the connection, partial-review and preference workflow described below requires integration and development-host testing. It is not a claim about the current Marketplace release. Live editorial evaluations, PKCE/editor compatibility, volunteer observations and updated screenshots remain pending. See [Testing the development workflow](TESTING.md) to try this checkout without replacing your installed extension or changing main.
+**Feature-preview branch:** the connection, partial-review and preference workflow below is integrated for isolated development-host testing. Partial-selection limitations and manual acceptance gates remain unresolved. This is not a claim about the current Marketplace release. Live editorial evaluations, PKCE/editor compatibility, volunteer observations and updated screenshots remain pending. See [Testing the development workflow](TESTING.md) to try this checkout without replacing your installed extension or changing main.
 
 ## Getting started
 
@@ -22,6 +22,8 @@ Edit AI-assisted prose inside your editor, review the changes, and keep control 
 4. Review the read-only native diff. **Show Current Changes** opens model-generated explanations; they are aids, not an exhaustive edit list or a safety guarantee.
 5. Use **Select Change Groups** to include or exclude actual text changes. Inspect the resulting preview, then **Apply Selected Changes**. Use **Accept Full Rewrite** to take the whole proposal, or **Discard Rewrite** to leave source unchanged. Selecting no groups makes no source edit. Group selection does not make another model request.
 6. After a successful application, one **Undo** restores the original selection.
+
+**Partial-selection limitation:** this preview groups whole physical lines, not words or sentences. Any recognised heading, list, quote, table or code/frontmatter, or any backtick, tilde, asterisk, underscore, square bracket, `<` or `>` anywhere in a selection makes the entire rewrite one coarse group, even when that text is unchanged. A newline-count change when multiple groups would otherwise exist, or a comparison above 250,000 line-pair cells, also causes whole-rewrite fallback. The title and group picker identify coarse grouping. This materially restricts ordinary README use: most formatted README selections currently offer only full acceptance or discard. Useful finer grouping for those passages is still an implementation blocker, not a completed deliverable.
 
 Review is enabled by default. Keep it enabled when testing partial acceptance. Read the exact composed result: combining individually reasonable edits can still change meaning. Protected-content checks can block unsafe combinations, but they cannot prove that the prose says what you intend.
 
@@ -36,7 +38,7 @@ Open **DeSlop: Manage Connection** from the Command Palette to connect, replace 
 
 Cancel setup or inference to leave source unchanged. Cancellation may not prevent provider charges already incurred. Retry retains the captured source, document type, provider/model and editorial preferences; changing a setting elsewhere must not redirect a pending operation.
 
-If the source changes or closes, DeSlop must not apply the old result to it. Use the explicit **Copy Reviewed Result** recovery action or discard it. A failed application is not a successful rewrite. Closing review discards the pending choice. Pending work is not restored after an extension reload.
+If the source changes or closes, DeSlop must not apply the old result to it. Choose **Copy Result** in the recovery prompt, or **DeSlop: Copy Completed Result** from the Command Palette; otherwise discard it. **Copy Reviewed Result** applies only while its review is still open. **Review Full Proposal** in recovery starts again with the full proposal selected, not the prior subset. A failed application is not a successful rewrite. Closing review discards the pending choice. Pending work is not restored after an extension reload.
 
 ## Editorial preferences
 
@@ -91,11 +93,19 @@ The return cases must survive. The code block here illustrates a comment selecti
 
 Before:
 
-> It is worth noting that the queue was empty. I went home—at last.
+> It is worth noting that the queue was empty.
+>
+> I kept my notebook.
+>
+> I went home—at last.
 
-Suppose a proposal removes the lead-in and also changes the deliberate dash. If those edits are independent groups, include the lead-in removal, exclude the punctuation change, and inspect:
+Select the plain passage without quotation markers. Suppose a proposal removes the lead-in and also changes the deliberate dash, while retaining the middle paragraph and all line boundaries. Those line-separated edits can form two groups. Include the lead-in removal, exclude the punctuation change, and inspect:
 
-> The queue was empty. I went home—at last.
+> The queue was empty.
+>
+> I kept my notebook.
+>
+> I went home—at last.
 
 Not every textual difference can safely be split. Dependent structural/protected changes may appear as one group. The displayed composed preview, not the model's explanations, is the text to check before applying.
 

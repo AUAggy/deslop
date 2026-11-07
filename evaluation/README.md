@@ -52,7 +52,7 @@ Omit `--case` only after approving a full 36-case run. Use `--prompt clearer --p
 | All four combinations, structure-conflict case | Pending | Pending |
 | Representative mixed partial subsets in editor | Pending | Pending |
 
-The runner records evaluation version, case ID, provider, resolved model, timestamp, full effective preferences, exact prompt SHA-256, raw rewritten output, cleaned output, protected-content issues, latency, token usage when returned, and a pending reviewer record. It does not retain raw provider errors. Monetary cost is explicitly **unavailable**, not zero. Add provider billing evidence, or a labelled estimate with dated token rates, calculation, currency and assumptions; do not present an estimate as an invoice. Record timeouts/failures as observations, not omitted successes.
+The runner records evaluation version, case ID, provider, resolved model, timestamp, full effective preferences, exact prompt SHA-256, raw rewritten output, cleaned output, sanitised model explanations, invisible/confusable cleanup counts, protected-content issues, latency, token usage when returned, and a pending reviewer record. Explanations describe the full proposal, not a safety proof or a mapping to partial groups. The runner uses the extension's OpenRouter attribution headers and explicitly disables SDK logging, including inherited debug logging. It does not retain raw provider errors. Monetary cost is explicitly **unavailable**, not zero. Add provider billing evidence, or a labelled estimate with dated token rates, calculation, currency and assumptions; do not present an estimate as an invoice. Record timeouts/failures as observations, not omitted successes.
 
 ## Human rubric
 

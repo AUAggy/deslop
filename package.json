@@ -283,6 +283,12 @@
     "lint": "eslint src --ext .ts",
     "test": "vscode-test",
     "test:workflow": "node scripts/test-workflow.cjs",
+    "test:connections": "node src/test/connections.integration.cjs",
+    "test:review": "node node_modules/mocha/bin/mocha.js --ui tdd out/test/suite/reviewPatch.test.js out/test/suite/reviewUi.test.js",
+    "test:editorial": "node --test evaluation/assets.test.cjs evaluation/editorial.test.cjs",
+    "test:contracts": "node scripts/test-integration-contracts.cjs",
+    "test:sdk-privacy": "node scripts/test-sdk-privacy.cjs",
+    "test:deterministic": "npm run compile && npm run lint && npm run test:workflow && npm run test:connections && npm run test:review && npm run test:editorial && npm run test:contracts && npm run test:sdk-privacy",
     "posttest": "sh scripts/unregister-vscode-test.sh"
   },
   "devDependencies": {

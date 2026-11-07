@@ -50,7 +50,9 @@ async function main(args) {
     preservePunctuationStyle: ['punctuation', 'both'].includes(options['--preferences']),
     preserveParagraphListStructure: ['structure', 'both'].includes(options['--preferences']),
   };
-  const client = new OpenAI({ apiKey, baseURL: provider === 'venice' ? 'https://api.venice.ai/api/v1' : 'https://openrouter.ai/api/v1', maxRetries: 0 });
+  const client = new OpenAI({ apiKey, baseURL: provider === 'venice' ? 'https://api.venice.ai/api/v1' : 'https://openrouter.ai/api/v1',
+    defaultHeaders: provider === 'openrouter' ? { 'HTTP-Referer': 'https://github.com/AUAggy/deslop', 'X-Title': 'DeSlop' } : {},
+    maxRetries: 0, logLevel: 'off' });
   // Exclusive creation prevents accidental overwrites. Results are explicit evaluation artifacts.
   const fd = fs.openSync(outputPath, 'wx', 0o600);
   try {
@@ -77,10 +79,14 @@ async function main(args) {
         const parsed = JSON.parse(response.choices[0]?.message?.content ?? 'null');
         if (!parsed || typeof parsed.rewritten !== 'string' || !Array.isArray(parsed.changes)) { throw new Error('Invalid shape'); }
         record.output = parsed.rewritten;
+        record.modelExplanations = parsed.changes.filter(change => change && typeof change.pattern === 'string' && typeof change.action === 'string')
+          .map(({ pattern, action }) => ({ pattern, action }));
         const issues = verifyProtectedRegions(item.source, parsed.rewritten);
         record.protectedIssues = issues;
         record.status = issues.length ? 'hard-failure-protected-content' : 'awaiting-human-review';
-        record.validatedOutput = issues.length ? null : stripInvisible(parsed.rewritten).text;
+        const cleaned = issues.length ? null : stripInvisible(parsed.rewritten);
+        record.validatedOutput = cleaned?.text ?? null;
+        record.cleanup = cleaned ? { invisibleCount: cleaned.invisibleCount, confusableCount: cleaned.confusableCount } : null;
       } catch {
         // Never persist raw provider errors, headers, callbacks or credentials.
         record.status = 'request-or-response-failure';
@@ -92,7 +98,7 @@ async function main(args) {
   } finally { fs.closeSync(fd); }
 }
 
-module.exports = { parseArgs };
+module.exports = { parseArgs, main };
 if (require.main === module) {
   main(process.argv.slice(2)).catch(() => {
     console.error('Evaluation stopped. Check explicit flags, dedicated evaluation credential, new output path, compiled assets and provider availability. No raw error was logged.');
