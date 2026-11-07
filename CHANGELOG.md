@@ -1,10 +1,13 @@
 # Changelog
 
-## Unreleased (feature testing)
+## Unreleased
 
-**Browser connection removed; API keys are the only way to connect.** Live testing found the browser authorisation flow unreliable, and it has been removed entirely: no OAuth/PKCE, no callback handling, no Connect OpenRouter action. First use now offers Enter Key (paste a key; it is verified before replacing the stored one) and Get Key (opens your provider's account page); Manage Connection offers Enter/Replace Key, authentication and model tests, Open Provider Account and Disconnect. Stored keys are never wiped by this change — only Disconnect, after confirmation, removes one.
-
-**Also in this feature preview, not yet released:** review changes in groups and apply only the ones you accept; optional editorial preferences for punctuation style and paragraph/list organisation; document-type detection and defaults; and non-destructive key replacement and disconnect.
+- **Choose which edits to keep.** Include or exclude change groups in a read-only diff, inspect the combined result, and apply it with one undoable edit. Related changes may stay grouped to protect markup and code.
+- **Read explanations before accepting.** Show Current Changes is available during review, alongside keyboard controls for group selection, application and discard. Explanations no longer open automatically for new users; existing explicit settings are respected.
+- **Keep more of your writing style.** Optional preferences ask the model to preserve punctuation or paragraph/list structure. Both default off; neither guarantees exact preservation.
+- **Manage keys without deleting a working connection first.** Manage Connection provides safe replacement, separate authentication and model tests, and confirmed disconnect. OpenRouter and Venice still use your own API keys; browser authorisation is not included.
+- **Recover without starting over.** Setup resumes the selected rewrite after key entry. Cancel inference, retry with the same choices, or copy a completed result if the source changes or closes. Closing review discards it; unchanged output skips review with “No changes needed”.
+- **Skip unnecessary document-type prompts.** Recognised README, comment and commit-message contexts can select a type automatically. An explicit default wins; reusing the last choice requires opt-in.
 
 ## v0.1.9 -- 2026-10-30
 

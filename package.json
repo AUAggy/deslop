@@ -1,7 +1,7 @@
 {
   "name": "deslop",
   "displayName": "DeSlop - AI Slop Remover",
-  "description": "Rewrites AI-generated prose into clear technical writing. Removes slop vocabulary, padding phrases, decorative emojis, and cliche structures from READMEs, docstrings, commit messages, and blog posts. Works with OpenRouter and Venice.ai. Any model, your API key.",
+  "description": "Remove AI filler from Markdown, READMEs, docstrings, commit messages and articles. Review the diff and apply only the edits you want. Bring your OpenRouter or Venice API key.",
   "version": "0.1.9",
   "publisher": "AUAggy",
   "repository": {
@@ -17,24 +17,11 @@
     "Formatters"
   ],
   "keywords": [
-    "ai",
-    "slop",
-    "prose",
-    "writing",
-    "documentation",
-    "readme",
+    "ai slop",
     "humanizer",
-    "llm",
-    "chatgpt",
-    "copilot",
-    "rewrite",
-    "editing",
-    "technical writing",
-    "ai writing",
-    "deSlop",
-    "venice",
-    "openrouter",
-    "grok"
+    "markdown",
+    "documentation",
+    "rewrite"
   ],
   "galleryBanner": {
     "color": "#1e1e2e",
@@ -220,7 +207,7 @@
             "venice"
           ],
           "default": "openrouter",
-          "description": "AI provider. openrouter: uses openrouter.ai (default model: openai/gpt-6-luna). venice: uses venice.ai (default model: openai-gpt-6-luna). Each provider requires its own API key."
+          "description": "Inference provider. Use your own OpenRouter or Venice API key; keys are stored separately."
         },
         "deslop.model": {
           "type": "string",
@@ -240,35 +227,35 @@
             "Blog/Article"
           ],
           "default": null,
-          "description": "Explicit type takes precedence; otherwise infer recognised README/comment/commit contexts, reuse last choice only when enabled, or ask."
+          "description": "Use this type for every rewrite. When null, infer from recognised context, reuse a remembered choice if enabled, or ask."
         },
         "deslop.showChangeLog": {
           "type": "boolean",
           "default": false,
-          "description": "Show model explanations after application. Off by default; Show Current Changes and Show Last Changes remain available. Existing explicit user choices are preserved; workspace overrides are ignored."
+          "description": "Open model explanations after applying a rewrite. Off by default. Only user-level settings apply; workspace and language overrides are ignored."
         },
         "deslop.autoAccept": {
           "type": "boolean",
           "default": false,
-          "description": "Skip diff view and replace text immediately. (User-scope only; workspace overrides are ignored for safety.)"
+          "description": "Apply the full rewrite without review. Only user-level settings apply; workspace and language overrides are ignored."
         },
         "deslop.preservePunctuationStyle": {
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "Ask the model to retain legitimate punctuation style. Not a mechanical guarantee; meaning and output integrity take precedence. User scope only; changes affect new requests, not existing results."
+          "description": "Ask the model to preserve punctuation style in new requests. Meaning and output-integrity checks take precedence. User-level only."
         },
         "deslop.preserveParagraphListStructure": {
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "Ask the model to retain paragraph and list organisation. Not an exact formatting or meaning guarantee. User scope only; changes affect new requests, not existing results."
+          "description": "Ask the model to preserve paragraph and list structure in new requests. Meaning and protected content take precedence. User-level only."
         },
         "deslop.rememberDocumentType": {
           "type": "boolean",
           "default": false,
           "scope": "application",
-          "description": "Reuse the last explicitly selected document type when no explicit default or high-confidence context applies. Otherwise the last choice only changes picker ordering. User scope only; changes affect new requests, not existing results."
+          "description": "Reuse the last picked document type when no default or recognised context applies. When off, the last choice only reorders the picker. User-level only."
         }
       }
     }

@@ -1,157 +1,117 @@
 <p align="center">
-  <img src="images/icon.png" width="96" alt="DeSlop">
+  <img src="https://raw.githubusercontent.com/AUAggy/deslop/main/images/icon.png" width="96" alt="DeSlop">
 </p>
 
-<h1 align="center">DeSlop</h1>
+<h1 align="center">DeSlop: AI Slop Remover for VS Code</h1>
 
 <p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=AUAggy.deslop">VS Code Marketplace</a> ·
-  <a href="https://open-vsx.org/extension/AUAggy/deslop">Open VSX</a> ·
-  <a href="https://github.com/AUAggy/deslop/releases">Released versions</a>
+  <a href="https://open-vsx.org/extension/AUAggy/deslop">Open VSX / VSCodium</a> ·
+  <a href="https://github.com/AUAggy/deslop/releases">Download VSIX</a>
 </p>
 
-Edit AI-assisted prose inside your editor, review the changes, and keep control of the result. DeSlop rewrites selected READMEs, comments, commit messages and article passages using your chosen provider and model.
+Remove AI filler from Markdown, READMEs, comments, commit messages and articles without leaving your editor. DeSlop rewrites your selection, shows a native diff, and lets you apply only the changes you choose.
 
-**Feature-preview branch:** the connection, partial-review and preference workflow below is integrated for isolated development-host testing. Partial-selection limitations and manual acceptance gates remain unresolved. This is not a claim about the current Marketplace release. Live editorial evaluations, editor compatibility, volunteer observations and updated screenshots remain pending. See [Testing the development workflow](TESTING.md) to try this checkout without replacing your installed extension or changing main.
+Use your own **OpenRouter or Venice API key** and choose your model. No DeSlop account. Provider usage is billed to you.
 
-## Getting started
+Over **4,000 downloads** across the VS Code Marketplace and Open VSX.
 
-1. Open a document and **select the prose first**. Press **Shift+Alt+D**, choose **DeSlop: DeSlop Selection** from the Command Palette, or use the selection's context menu.
-2. If no credential is stored, enter an API key for the chosen provider (manual API-key entry is the only connection method; browser/OAuth authorisation was removed). Get Key opens your provider's account page in the browser — it never starts an authorisation flow. Setup requires your own provider account and credits; it does not provide free inference. Your pending selection stays in memory while setup completes.
-3. Confirm the document type if asked. An explicit default wins; recognised README filenames, source comments and commit-message editors can avoid the picker. An arbitrary Markdown filename is not treated as a README. Your last choice only changes picker order unless you explicitly enable automatic reuse.
-4. Review the read-only native diff. **Show Current Changes** opens model-generated explanations; they are aids, not an exhaustive edit list or a safety guarantee.
-5. Use **Select Change Groups** to include or exclude actual text changes. Inspect the resulting preview, then **Apply Selected Changes**. Use **Accept Full Rewrite** to take the whole proposal, or **Discard Rewrite** to leave source unchanged. Selecting no groups makes no source edit. Group selection does not make another model request.
-6. After a successful application, one **Undo** restores the original selection.
+<p align="center">
+  <a href="#getting-started">Get started</a> ·
+  <a href="#review-and-choose-your-edits">Review controls</a> ·
+  <a href="#settings">Settings</a> ·
+  <a href="#privacy-and-costs">Privacy</a>
+</p>
 
-**Partial acceptance:** review computes bounded hierarchical line/word differences with unchanged code, frontmatter and protected spans kept atomic, and merges only edits that touch the same affected construct (a changed list block, a paired link/emphasis/HTML delimiter, a reference identifier and its definition). Unchanged headings, lists or inline code between two prose edits no longer collapse the selection: independent edits stay separately selectable, and each group can be revealed at its exact span from the group picker. This is deterministic text grouping, not a Markdown parser: it does not prove that a syntactically valid subset preserves meaning, so read the composed preview before applying.
+> Next-release preview: this branch documents the tested feature build, not the currently published extension. See the [release notes](https://github.com/AUAggy/deslop/releases) for published versions.
 
-**Remaining grouping limits:** sentence boundaries are `.`/`!`/`?` plus whitespace, so clause-level edits separated only by semicolons inside one paragraph currently form one group; unmatched or ambiguous markup couples only its local paragraph as a labelled coarse group, never the whole document; an ambiguous block whose comparison exceeds the per-block budget also coarsens locally with a visible reason. Independently safe never means semantically independent, and qualifications can still move between groups.
+## Cut the filler, keep the point
 
-Review is enabled by default. Keep it enabled when testing partial acceptance. Read the exact composed result: combining individually reasonable edits can still change meaning. Protected-content checks can block unsafe combinations, but they cannot prove that the prose says what you intend.
+DeSlop targets padded lead-ins, repeated claims, hype and canned phrasing. It edits existing prose rather than supplying missing evidence or facts.
 
-## Connections, cancellation and recovery
+**Before**
 
-Open **DeSlop: Manage Connection** from the Command Palette to enter or replace a credential, test the connection, open the provider account or disconnect. A stored key and a successful connection test are different states; neither guarantees credit or access to a particular model. Any completion-based model test must disclose potential charges before it runs.
+> It is worth noting that Parcelnote provides users with the ability to search release notes in a local folder.
 
-- **OpenRouter:** enter an OpenRouter API key manually. Get Key opens openrouter.ai/keys so you can create one; it does not start or complete any authorisation flow on DeSlop's behalf.
-- **Venice:** enter a Venice API key manually. Get Key opens the Venice API-keys settings page.
-- Keys are stored separately for each provider; stored keys are never wiped by setup changes — only explicit Disconnect, after confirmation.
-- **Replace:** cancelling or rejecting a candidate must leave the working credential intact. The legacy Reset API Key entry point becomes safe replacement, not immediate deletion.
-- **Disconnect:** removes only the identified provider's credential after confirmation.
-
-Cancel setup or inference to leave source unchanged. Cancellation may not prevent provider charges already incurred. Retry retains the captured source, document type, provider/model and editorial preferences; changing a setting elsewhere must not redirect a pending operation.
-
-If the source changes or closes, DeSlop must not apply the old result to it. Choose **Copy Result** in the recovery prompt, or **DeSlop: Copy Completed Result** from the Command Palette; otherwise discard it. **Copy Reviewed Result** applies only while its review is still open. **Review Full Proposal** in recovery starts again with the full proposal selected, not the prior subset. A failed application is not a successful rewrite. Closing review discards the pending choice. Pending work is not restored after an extension reload.
-
-## Editorial preferences
-
-Open **DeSlop: Configure Editorial Preferences** to choose either preference, both, or reset both to off:
-
-- **Preserve punctuation style:** asks the model to retain legitimate choices such as curly quotes and deliberate dash usage.
-- **Preserve paragraph/list structure:** asks it to keep paragraph boundaries, list order and nesting where possible.
-
-Both default **off** and persist only through an explicit user choice at user scope. Workspace and language overrides cannot enable them. Review shows the captured choices. Changing them does not alter a completed proposal: applying new preferences requires explicit regeneration and another potentially billable request. A failed regeneration must retain the prior completed result.
-
-These are bounded editorial requests, not exact formatting guarantees. Meaning, qualifications, protected content, document-type requirements and output-integrity checks take precedence. Invisible or confusable characters prohibited by the checks are not retained to satisfy punctuation style. DeSlop does not infer a voice profile, learn from accepted selections or archive writing samples.
-
-## What gets edited
-
-The prompt targets filler, inflated framing, repetitive templates and decorative formatting. Vocabulary flags require context: “robust estimator”, “critical section” and “public key” are legitimate technical terms, not automatic errors. A useful contrast or a genuine question may belong in the text. Punctuation is not evidence of authorship.
-
-Code fences, inline code and recognised YAML frontmatter receive mechanical protected-content checks. Those checks reject detected protected-content changes and remove prohibited invisible/confusable characters outside protected regions. They do **not** establish semantic equivalence or verify facts. Check identifiers, paths, URLs, numbers, conditions and negation in the preview.
-
-### Examples
-
-These are synthetic illustrations of editing choices, **not recorded live-model outputs**. The [evaluation corpus](evaluation/README.md) contains the testable cases and reviewer rubric.
-
-**README, full acceptance**
-
-Before:
-
-> It is worth noting that Parcelnote searches release notes in a local folder.
-
-Illustrative proposal:
+**After**
 
 > Parcelnote searches release notes in a local folder.
 
-Accept the full rewrite when removing the lead-in is the only desired change. Do not add speed, indexing or collaboration claims absent from the source.
+Illustrative edit, not a recorded model output. Results depend on your model and source text.
 
-**Comment, narrow edit**
+![Illustrative README rewrite: AI filler removed without adding claims](images/deslop-before-after.png)
 
-Before:
+Technical terms such as “robust estimator” and “critical section” are not filler. Useful qualifications, constraints and deliberate voice belong in the result. Already-clear text may need no changes.
 
-```ts
-// It is important to note that this returns the first match, or undefined if none exists.
-```
+## Getting started
 
-Illustrative proposal:
+Install **DeSlop** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=AUAggy.deslop) or [Open VSX for VSCodium](https://open-vsx.org/extension/AUAggy/deslop). For manual installation, download a release VSIX and run **Extensions: Install from VSIX…**.
 
-```ts
-// Return the first match, or undefined if none exists.
-```
+1. **Select prose**, then press **Shift+Alt+D** or run **DeSlop: DeSlop Selection**.
+2. Paste your provider's API key when prompted. **Get Key** opens [OpenRouter](https://openrouter.ai/keys) or [Venice](https://venice.ai/settings/api) so you can create one, then return to setup without reselecting text.
+3. Choose a document type if asked: **README**, **Docstring/Comment**, **Commit Message** or **Blog/Article**. Recognised README, comment and commit-message contexts can skip the picker; explicit defaults take precedence.
+4. Review the diff. Apply the full rewrite, choose change groups, or discard it. One **Undo** restores the original selection after application.
 
-The return cases must survive. The code block here illustrates a comment selection; fenced code in an actual prose selection is protected rather than rewritten.
+A provider account, suitable model access, internet connection and any required credits are needed. API keys are the only connection method.
 
-**Article, partial acceptance**
+## Review and choose your edits
 
-Before:
+- **Select Change Groups** includes or excludes edits and updates the read-only preview. You can reveal a group's location from the picker. Changing the selection makes no new model request.
+- **Show Current Changes** opens the model's explanations before you decide. Explanations may be incomplete; inspect the text itself.
+- **Apply Selected Changes** applies the displayed result. **Accept Full Rewrite** takes every group; **Discard Rewrite** leaves the source untouched.
 
-> It is worth noting that the queue was empty.
->
-> I kept my notebook.
->
-> I went home—at last.
+Related edits may stay grouped to avoid splitting markup or protected content. Ambiguous blocks can form a larger group. Check the combined result: partial acceptance is not a guarantee that meaning survives.
 
-Select the plain passage without quotation markers. Suppose a proposal removes the lead-in and also changes the deliberate dash, while retaining the middle paragraph and all line boundaries. Those line-separated edits can form two groups. Include the lead-in removal, exclude the punctuation change, and inspect:
+| Action | Windows / Linux | macOS |
+|---|---|---|
+| Rewrite selection | `Shift+Alt+D` | `Shift+Alt+D` |
+| Select change groups | `Ctrl+Alt+G` | `Cmd+Alt+G` |
+| Apply selected changes | `Ctrl+Alt+Enter` | `Cmd+Alt+Enter` |
+| Discard review | `Escape` | `Escape` |
 
-> The queue was empty.
->
-> I kept my notebook.
->
-> I went home—at last.
+Review shortcuts apply only while the associated review is active and the picker is closed. All actions are also in the Command Palette.
 
-Not every textual difference can safely be split. Dependent structural/protected changes may appear as one group. The displayed composed preview, not the model's explanations, is the text to check before applying.
+## Your key, model and writing preferences
 
-**Already clean**
+**DeSlop: Manage Connection** lets you enter or replace a key, test authentication, open your provider account or disconnect. Each provider keeps its own credential. Cancelling or failing validation during replacement leaves the stored key intact; Disconnect removes it locally after confirmation, without revoking it at the provider.
 
-> The cache is local to each process, not shared across workers.
+**DeSlop: Configure Editorial Preferences** offers two optional requests: preserve punctuation style and preserve paragraph/list structure. Both default off. They guide the model, not guarantee exact formatting. Changing preferences for a completed proposal requires explicit regeneration and another potentially billable request. DeSlop does not build a voice profile from your writing.
 
-Leaving this unchanged is a valid result. A rewrite should not be required just to prove that a request ran.
+Cancel inference when needed. Retry keeps your request choices. If the source changes or closes, DeSlop blocks stale application and offers **Copy Completed Result** so the rewrite is not lost. Pending results are lost on editor reload.
 
 ## Settings
 
-The new settings below are part of the feature-preview wiring; check the final contributions during acceptance.
+Open Settings and search for `deslop`.
 
-| Setting | Default | Behaviour |
+| Setting | Default | Purpose |
 |---|---|---|
-| `deslop.provider` | `openrouter` | Select OpenRouter or Venice; each needs its own credential. |
-| `deslop.model` | Provider-specific | When unset, the configured defaults are `openai/gpt-6-luna` on OpenRouter and `openai-gpt-6-luna` on Venice. Explicit overrides win. Availability and price depend on your provider/account. |
-| `deslop.defaultDocumentType` | `null` | Explicit type takes precedence. Otherwise use high-confidence context, enabled remembered choice, or picker. |
-| `deslop.rememberDocumentType` | `false` | User-only opt-in to reuse the last explicitly picked type after context inference. Otherwise that choice only reorders the picker. |
-| `deslop.preservePunctuationStyle` | `false` | User-only punctuation-style request; subordinate to safety and document type. |
-| `deslop.preserveParagraphListStructure` | `false` | User-only paragraph/list organisation request, not an exact guarantee. |
-| `deslop.showChangeLog` | `false` in the preview | Do not automatically open explanations for new users. An existing explicit user preference is respected. |
-| `deslop.autoAccept` | `false` | User-only full-rewrite opt-in that skips review. Partial acceptance requires review. |
+| `deslop.provider` | `openrouter` | OpenRouter or Venice. |
+| `deslop.model` | Provider-specific | Unset: `openai/gpt-6-luna` on OpenRouter; `openai-gpt-6-luna` on Venice. Explicit overrides win. |
+| `deslop.defaultDocumentType` | `null` | Set a type; otherwise infer from context or ask. |
+| `deslop.rememberDocumentType` | `false` | Reuse the last picked type when no default or recognised context applies. |
+| `deslop.preservePunctuationStyle` | `false` | Ask the model to retain punctuation style. |
+| `deslop.preserveParagraphListStructure` | `false` | Ask it to retain paragraph and list organisation. |
+| `deslop.showChangeLog` | `false` | Open explanations after application. Explicit existing user choices are respected. |
+| `deslop.autoAccept` | `false` | Skip review and apply the full rewrite. Keep off for partial acceptance. |
 
-The four types remain **README**, **Docstring/Comment**, **Commit Message** and **Blog/Article**. The command palette also provides **Return to Review**, **Inspect Full Proposal**, **Show Current Changes**, and **Show Last Changes**. Action labels must be checked against the final integrated build; no command-ID lookup is needed for normal use.
+Review bypass, automatic explanations, editorial preferences and remembered type use user-level choices; workspace overrides cannot enable them. Without automatic reuse, the last document-type choice only reorders the picker.
 
 ## Privacy and costs
 
-Selected prose, the system prompt, document type and enabled preference instructions are sent to your selected provider over HTTPS using your credential. Inference is funded through your provider account. Authentication and connection checks also contact the provider. Provider and upstream model-service policies apply; review them before sending confidential text. DeSlop does not promise a provider's retention policy on its behalf.
+Selected text, editing instructions and enabled preferences go over HTTPS directly to your selected provider. There is no DeSlop inference server. Provider and upstream model-service policies apply; do not send text you would not share with them.
 
-Credentials use VS Code SecretStorage, not repository settings. The credential service and ownership depend on the editor/extension-host environment. Do not share API keys in bug reports.
+API keys use your editor's **SecretStorage**, not `settings.json`. DeSlop adds no telemetry and keeps pending reviews in memory rather than maintaining a writing history. Editor storage and clipboard behaviour are separate.
 
-The extension adds no telemetry and does not deliberately archive selected prose or pending results. Review and recovery keep prose in memory for the active session, not a DeSlop-managed draft history. The editor/platform's own storage, crash handling and clipboard policies are separate. Copying a result is an explicit action. The opt-in evaluation runner separately writes only its synthetic test results to a user-chosen file.
+You pay your provider for inference. Authentication checks do not request a completion; optional model-readiness tests do, with a charge warning first. Cancelling a request cannot guarantee the provider has not already incurred usage.
 
-## Limits and verification
+## Limits
 
-- Prose selections only; source-code selections are rejected. The current guard is 16,000 characters, roughly 3,000 words depending on the text.
-- No factual verification, missing-evidence invention, guaranteed meaning preservation or detector-evasion promise.
-- One active rewrite at a time per extension host; no cross-window operation/credential transaction guarantee, automatic file-wide rewrite, writing-profile onboarding or hosted DeSlop inference.
-- An internet connection and a provider account with appropriate access/credit are required.
-- Registry listing or installation in another editor does not prove callback/review compatibility. The [versioned compatibility matrix](TESTING.md#compatibility-matrix) currently labels untested environments and pending primary-editor checks.
-- Editorial evaluations, consent-based volunteer observations, final screenshots and manual release gates remain pending. See [Testing](TESTING.md) and [Editorial evaluation](evaluation/README.md).
+- Prose selections only, up to **16,000 characters** (roughly 3,000 words). One active operation per extension host.
+- Protected-content checks cover recognised code fences, inline code and YAML/TOML frontmatter. They do not verify facts or prove meaning preservation. Check numbers, identifiers, conditions and negation before applying.
+- DeSlop edits for readers. It makes no AI-detector-evasion or “undetectable text” promise.
+
+For detailed grouping limits, editor compatibility and development checks, see [Testing](TESTING.md). The [editorial evaluation guide](evaluation/README.md) explains the corpus and review criteria; it is not a published quality benchmark.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+[MIT](LICENSE). [Report a bug or request a feature](https://github.com/AUAggy/deslop/issues).
