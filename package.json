@@ -2,7 +2,7 @@
   "name": "deslop",
   "displayName": "DeSlop - AI Slop Remover",
   "description": "Remove AI filler from Markdown, READMEs, docstrings, commit messages and articles. Review the diff and apply only the edits you want. Bring your OpenRouter or Venice API key.",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "publisher": "AUAggy",
   "repository": {
     "type": "git",
